@@ -23,14 +23,27 @@ app = Flask(__name__)
 # Hard limit on incoming HTTP request payload (6 MB)
 app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
 
-# Configure CORS to permit all origins cleanly across environments
+# Configure CORS to permit all origins cleanly (supporting both askio-frontend and askio-ai)
 frontend_env = os.getenv("FRONTEND_URL", "").strip()
 if frontend_env and frontend_env != "*":
-    # Strip any trailing slashes from allowed origins to prevent CORS mismatch
+    # Strip any trailing slashes from allowed origins
     allowed_origins = [origin.strip().rstrip('/') for origin in frontend_env.split(",") if origin.strip()]
-    CORS(app, resources={r"/api/*": {"origins": allowed_origins, "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Accept"]}})
+    # Ensure both production frontends are present if not wildcard
+    for extra in ["https://askio-ai.onrender.com", "https://askio-frontend.onrender.com"]:
+        if extra not in allowed_origins:
+            allowed_origins.append(extra)
+    CORS(app, resources={r"/*": {"origins": allowed_origins, "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Accept"]}})
 else:
-    CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Accept"]}})
+    CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Accept"]}})
+
+@app.after_request
+def add_cors_headers(response):
+    origin = request.headers.get("Origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Accept, Authorization"
+    return response
 
 # Lightweight per-IP sliding-window rate limiter (35 req/min)
 RATE_LIMIT_WINDOW = 60
