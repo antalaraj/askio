@@ -258,9 +258,15 @@ def _execute_tool(
             return json.dumps(res, ensure_ascii=False)
 
         if name == "get_weather":
-            loc_query = (args.get("location") or "current").strip()
+            loc_query = (args.get("location") or "").strip()
             weather_text = None
-            if loc_query.lower() in ("current", "local", "my location", "here", ""):
+
+            # 1. If explicit location given, try direct lookup
+            if loc_query and loc_query.lower() not in ("current", "local", "my location", "here", "default"):
+                weather_text = get_weather_by_city(loc_query)
+
+            # 2. If direct lookup failed or user asked for local/current weather, use coordinates from browser
+            if not weather_text:
                 loc = (client_info or {}).get("location") or {}
                 if loc.get("latitude") is not None and loc.get("longitude") is not None:
                     weather_text = get_weather_by_coords(
@@ -268,16 +274,24 @@ def _execute_tool(
                         float(loc["longitude"]),
                         loc.get("city") or "Current Location"
                     )
-                if not weather_text:
-                    ip_loc = get_ip_fallback_location((client_info or {}).get("client_ip"))
-                    if ip_loc and ip_loc.get("latitude") is not None:
-                        weather_text = get_weather_by_coords(
-                            ip_loc["latitude"],
-                            ip_loc["longitude"],
-                            ip_loc.get("city") or "Local Area"
-                        )
-            else:
-                weather_text = get_weather_by_city(loc_query)
+
+            # 3. Fallback to client IP location detection
+            if not weather_text:
+                ip_loc = get_ip_fallback_location((client_info or {}).get("client_ip"))
+                if ip_loc and ip_loc.get("latitude") is not None:
+                    weather_text = get_weather_by_coords(
+                        ip_loc["latitude"],
+                        ip_loc["longitude"],
+                        ip_loc.get("city") or "Local Area"
+                    )
+
+            # 4. Fallback to web search if geocoding still didn't find the micro-locality
+            if not weather_text and loc_query:
+                logger.info("Falling back to web search for weather in '%s'", loc_query)
+                search_res = web_search(f"current weather temperature in {loc_query}", max_results=3)
+                if search_res.get("results"):
+                    snippets = "\n".join([f"- {r.get('title')}: {r.get('snippet')}" for r in search_res["results"]])
+                    return f"[LIVE SEARCH RESULTS FOR {loc_query.upper()} WEATHER]\n{snippets}"
 
             if weather_text:
                 return weather_text
