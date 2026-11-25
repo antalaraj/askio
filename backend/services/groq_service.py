@@ -71,6 +71,28 @@ def sanitize_and_truncate_messages(raw_messages: List[Dict[str, Any]]) -> List[D
 
     return final_messages
 
+def find_fallback_model(client: Groq) -> str:
+    """Find a supported chat/text model available on the user's Groq account."""
+    try:
+        available_models = [m.id for m in client.models.list().data]
+        logger.info("Discovering available Groq models on account: %s", available_models)
+        
+        # Priority order of preferred models
+        preferred_prefixes = ["llama-3.3", "llama-3.1", "llama3", "qwen", "openai/gpt-oss", "allam"]
+        for pref in preferred_prefixes:
+            for model_id in available_models:
+                if pref in model_id.lower() and "guard" not in model_id.lower() and "whisper" not in model_id.lower():
+                    return model_id
+
+        # Any model not whisper or guard
+        for model_id in available_models:
+            if "whisper" not in model_id.lower() and "guard" not in model_id.lower():
+                return model_id
+    except Exception as e:
+        logger.warning("Could not query available models from Groq: %s", str(e))
+
+    return "qwen/qwen3.8-27b"
+
 def generate_chat_response(messages: List[Dict[str, Any]]) -> Tuple[str, int]:
     """
     Generate an AI chat response via Groq API.
@@ -96,23 +118,31 @@ def generate_chat_response(messages: List[Dict[str, Any]]) -> Tuple[str, int]:
         if not chat_completion.choices:
             raise RuntimeError("Received empty choices list from Groq API.")
 
-        reply = chat_completion.choices[0].message.content or ""
+        msg = chat_completion.choices[0].message
+        reply = msg.content or getattr(msg, 'reasoning', '') or ""
         return reply, 200
 
-    except RateLimitError as e:
-        logger.warning("Groq RateLimitError: %s", str(e))
-        raise
-    except AuthenticationError as e:
-        logger.error("Groq AuthenticationError: %s", str(e))
-        raise
-    except APITimeoutError as e:
-        logger.warning("Groq APITimeoutError: %s", str(e))
-        raise
-    except APIConnectionError as e:
-        logger.warning("Groq APIConnectionError: %s", str(e))
-        raise
     except APIError as e:
+        # Check if error is model_not_found (404)
+        if "model_not_found" in str(e) or e.status_code == 404:
+            fallback = find_fallback_model(client)
+            if fallback and fallback != model:
+                logger.warning("Configured model '%s' not found. Falling back to '%s'.", model, fallback)
+                chat_completion = client.chat.completions.create(
+                    messages=formatted_messages,
+                    model=fallback,
+                    temperature=0.7,
+                    max_tokens=2048,
+                    top_p=1,
+                    stream=False
+                )
+                if chat_completion.choices:
+                    msg = chat_completion.choices[0].message
+                    reply = msg.content or getattr(msg, 'reasoning', '') or ""
+                    return reply, 200
+
         logger.error("Groq APIError: %s", str(e))
+        raise
         raise
     except Exception as e:
         logger.exception("Unexpected error during Groq API call: %s", str(e))
