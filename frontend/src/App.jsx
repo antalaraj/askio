@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useConversations } from './hooks/useConversations';
 import { useChat } from './hooks/useChat';
+import { getClientContext, requestBrowserLocation, initLocationIfGranted } from './utils/location';
 import Sidebar from './components/Sidebar';
 import ChatHeader from './components/ChatHeader';
 import ChatMessage from './components/ChatMessage';
@@ -45,6 +46,24 @@ export default function App() {
   const [renameTarget, setRenameTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  // Client context & location state
+  const [clientContext, setClientContext] = useState(() => getClientContext());
+
+  // Initialize location on mount if granted
+  useEffect(() => {
+    initLocationIfGranted();
+    // Update client context state if location captured
+    const timer = setTimeout(() => {
+      setClientContext(getClientContext());
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleRequestLocation = useCallback(async () => {
+    await requestBrowserLocation();
+    setClientContext(getClientContext());
+  }, []);
+
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to latest message or typing indicator
@@ -79,6 +98,8 @@ export default function App() {
           onNewChat={handleNewChat}
           backendHealth={backendHealth}
           activeTitle={activeConversation?.title}
+          locationInfo={clientContext}
+          onRequestLocation={handleRequestLocation}
         />
 
         {/* Conversation Message Stream */}

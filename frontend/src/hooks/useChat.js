@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { sendChatMessage, checkBackendHealth } from '../services/chatService';
+import { getClientContext } from '../utils/location';
 
 /**
  * Custom hook to manage chat interaction, network communication, loading states, and error handling
@@ -67,7 +68,8 @@ export function useChat({ activeConversation, updateActiveMessages }) {
       lastFailedUserMessageRef.current = trimmed;
 
       try {
-        const assistantResponse = await sendChatMessage(conversationToSend);
+        const clientContext = getClientContext();
+        const assistantResponse = await sendChatMessage(conversationToSend, clientContext);
 
         const assistantMessage = {
           id: `asst-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,

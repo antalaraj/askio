@@ -1,14 +1,18 @@
 import React from 'react';
-import { Bot, Plus, PanelLeftOpen, Menu } from 'lucide-react';
+import { Bot, Plus, PanelLeftOpen, Menu, MapPin } from 'lucide-react';
 
 export default function ChatHeader({
   onToggleSidebar,
   isSidebarOpen,
   onNewChat,
   backendHealth,
-  activeTitle
+  activeTitle,
+  locationInfo,
+  onRequestLocation
 }) {
   const isOnline = backendHealth?.status === 'healthy';
+  const hasLocation = Boolean(locationInfo?.location);
+  const locationText = locationInfo?.location?.city || (hasLocation ? 'Location On' : 'Enable Location');
 
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-[#E2E8F0] px-3 sm:px-6 py-2.5">
@@ -55,8 +59,22 @@ export default function ChatHeader({
           </div>
         </div>
 
-        {/* Right side: New Chat Action */}
+        {/* Right side: Location & New Chat Actions */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={onRequestLocation}
+            type="button"
+            className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer shadow-xs ${
+              hasLocation
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/70'
+                : 'bg-slate-50 text-slate-600 border-[#E2E8F0] hover:bg-slate-100 hover:text-blue-600'
+            }`}
+            title={hasLocation ? `Current location: ${locationText}` : 'Enable browser location for instant weather'}
+          >
+            <MapPin className={`w-3.5 h-3.5 ${hasLocation ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span className="hidden sm:inline">{locationText}</span>
+          </button>
+
           <button
             onClick={onNewChat}
             type="button"

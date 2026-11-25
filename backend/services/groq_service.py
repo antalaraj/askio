@@ -1,7 +1,8 @@
 import os
 import logging
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from groq import Groq, RateLimitError, AuthenticationError, APIConnectionError, APITimeoutError, APIError
+from services.weather_service import detect_and_get_weather_context
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +10,9 @@ SYSTEM_PROMPT = (
     "You are Askio, a helpful, intelligent, and friendly AI assistant. "
     "Provide accurate, clear, relevant, and well-structured responses. "
     "Adapt your explanations to the user's question. Use examples when helpful. "
-    "If you are uncertain, communicate that honestly."
+    "If you are uncertain, communicate that honestly. "
+    "You have access to real-time context provided in the conversation (including live weather, current date, time, and user location). "
+    "Always provide accurate, helpful, and friendly answers using this real-time data when asked about current conditions, weather, time, or date."
 )
 
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
@@ -30,12 +33,12 @@ def get_groq_client() -> Tuple[Groq, str]:
     client = Groq(api_key=api_key)
     return client, model
 
-def sanitize_and_truncate_messages(raw_messages: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+def sanitize_and_truncate_messages(raw_messages: List[Dict[str, Any]], client_info: Optional[Dict[str, Any]] = None) -> List[Dict[str, str]]:
     """
     Validate, sanitize, and limit conversation history.
     - Limits context to the most recent MAX_HISTORY_MESSAGES.
     - Truncates individual message length.
-    - Prepends the required system instruction.
+    - Injects real-time context (weather, date, time, location) into system instruction.
     """
     allowed_roles = {"system", "user", "assistant"}
     cleaned_messages: List[Dict[str, str]] = []
@@ -61,12 +64,34 @@ def sanitize_and_truncate_messages(raw_messages: List[Dict[str, Any]]) -> List[D
     if not cleaned_messages or cleaned_messages[-1]["role"] != "user":
         raise ValueError("The conversation must contain at least one valid user message at the end.")
 
-    # Check if first message is a custom system prompt; if not, prepend our default system prompt
+    # Check for real-time weather information and client metadata
+    latest_user_text = cleaned_messages[-1]["content"] if cleaned_messages else ""
+    weather_info = detect_and_get_weather_context(latest_user_text, client_info)
+
+    dynamic_system_prompt = SYSTEM_PROMPT
+    client_context_parts = []
+
+    if client_info:
+        if client_info.get("local_time"):
+            client_context_parts.append(f"Current Date & Time: {client_info.get('local_time')}")
+        if client_info.get("timezone"):
+            client_context_parts.append(f"Timezone: {client_info.get('timezone')}")
+        loc = client_info.get("location")
+        if loc and isinstance(loc, dict) and loc.get("city"):
+            client_context_parts.append(f"User City: {loc.get('city')}")
+
+    if client_context_parts:
+        dynamic_system_prompt += "\n\n[USER CONTEXT]\n" + "\n".join(client_context_parts)
+
+    if weather_info:
+        dynamic_system_prompt += f"\n\n{weather_info}"
+
+    # Check if first message is a custom system prompt; if not, prepend our system prompt
     final_messages: List[Dict[str, str]] = []
     if cleaned_messages[0]["role"] == "system":
         final_messages.extend(cleaned_messages)
     else:
-        final_messages.append({"role": "system", "content": SYSTEM_PROMPT})
+        final_messages.append({"role": "system", "content": dynamic_system_prompt})
         final_messages.extend(cleaned_messages)
 
     return final_messages
@@ -93,7 +118,7 @@ def find_fallback_model(client: Groq) -> str:
 
     return "qwen/qwen3.8-27b"
 
-def generate_chat_response(messages: List[Dict[str, Any]]) -> Tuple[str, int]:
+def generate_chat_response(messages: List[Dict[str, Any]], client_info: Optional[Dict[str, Any]] = None) -> Tuple[str, int]:
     """
     Generate an AI chat response via Groq API.
     Returns (response_text, http_status_code).
@@ -104,7 +129,7 @@ def generate_chat_response(messages: List[Dict[str, Any]]) -> Tuple[str, int]:
         logger.error("Configuration error: %s", str(e))
         raise
 
-    formatted_messages = sanitize_and_truncate_messages(messages)
+    formatted_messages = sanitize_and_truncate_messages(messages, client_info)
 
     try:
         chat_completion = client.chat.completions.create(

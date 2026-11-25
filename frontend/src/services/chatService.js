@@ -49,7 +49,7 @@ export async function checkBackendHealth() {
  * @param {Array<{ role: string, content: string }>} messages
  * @returns {Promise<{ role: string, content: string }>}
  */
-export async function sendChatMessage(messages) {
+export async function sendChatMessage(messages, clientInfo = null) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 
@@ -66,7 +66,10 @@ export async function sendChatMessage(messages) {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({ messages: sanitizedMessages }),
+      body: JSON.stringify({
+        messages: sanitizedMessages,
+        client_info: clientInfo
+      }),
       signal: controller.signal
     });
 

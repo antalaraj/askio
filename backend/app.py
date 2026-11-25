@@ -63,8 +63,12 @@ def chat():
     if not isinstance(latest_msg, dict) or not latest_msg.get("content", "").strip():
         return jsonify({"error": "User message content cannot be empty."}), 400
 
+    client_info = data.get("client_info", {})
+    if not isinstance(client_info, dict):
+        client_info = {}
+
     try:
-        reply_content, status_code = generate_chat_response(messages)
+        reply_content, status_code = generate_chat_response(messages, client_info)
         return jsonify({
             "role": "assistant",
             "content": reply_content
