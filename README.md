@@ -1,8 +1,10 @@
-# AskAnything – AI Chat Assistant
+# Askio – AI Chat Assistant
 
-**AskAnything** is a modern, lightweight, and responsive AI chat application that enables users to communicate with an intelligent AI assistant powered by the **Groq API** and state-of-the-art Llama models.
+> **Your AI. Your Answers. Askio.**
 
-Built with a **React.js + Vite** frontend styled with **Tailwind CSS**, and backed by a robust **Python Flask** API, AskAnything delivers instantaneous, context-aware responses with full conversation persistence and comprehensive error handling.
+**Askio** is a modern, lightweight, and responsive AI chat application that enables users to communicate with an intelligent AI assistant powered by the **Groq API** and state-of-the-art models.
+
+Built with a **React.js + Vite** frontend styled with **Tailwind CSS**, and backed by a robust **Python Flask** API, Askio delivers instantaneous, context-aware responses with full conversation persistence, collapsible sidebar history, and comprehensive error handling.
 
 ---
 
@@ -23,7 +25,7 @@ Built with a **React.js + Vite** frontend styled with **Tailwind CSS**, and back
    - Self-healing storage parser that filters corrupted payloads and temporary states.
 
 3. **Robust Loading & Error Handling**:
-   - Animated typing indicator (`AskAnything is thinking...`).
+   - Animated typing indicator (`Askio is thinking...`).
    - Granular status handling: Groq rate limits (429), authentication/key errors (401/500), API timeouts (504), network disconnects (503), and input validation (400).
    - One-click **Retry** functionality for failed requests without duplicating user messages.
 
@@ -67,7 +69,7 @@ Built with a **React.js + Vite** frontend styled with **Tailwind CSS**, and back
 ## 🏛️ Project Architecture
 
 ```
-askanything/
+askio/
 │
 ├── frontend/
 │   ├── public/
@@ -147,8 +149,8 @@ askanything/
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/your-username/askanything.git
-cd askanything
+git clone https://github.com/your-username/askio.git
+cd askio
 ```
 
 ---
@@ -250,9 +252,9 @@ This repository includes a pre-configured `render.yaml` Blueprint for seamless z
 1. Push this repository to GitHub.
 2. In the [Render Dashboard](https://dashboard.render.com), click **New +** → **Blueprint**.
 3. Connect your GitHub repository. Render will automatically detect `render.yaml` and configure:
-   - **`askanything-backend`**: Python Web Service running Gunicorn.
-   - **`askanything-frontend`**: Static Site hosting the built React app.
-4. Set the `GROQ_API_KEY` environment variable in the `askanything-backend` service settings.
+   - **`askio-backend`**: Python Web Service running Gunicorn.
+   - **`askio-frontend`**: Static Site hosting the built React app.
+4. Set the `GROQ_API_KEY` environment variable in the `askio-backend` service settings.
 5. Deploy!
 
 ### Option B: Manual Setup on Render
@@ -289,4 +291,4 @@ This repository includes a pre-configured `render.yaml` Blueprint for seamless z
 ---
 
 ## 📄 License
-MIT License. Created for the AskAnything – AI Chat Assistant assessment.
+MIT License. Created for the Askio – AI Chat Assistant assessment.

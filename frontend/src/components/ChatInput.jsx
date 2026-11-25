@@ -52,7 +52,7 @@ export default function ChatInput({ onSendMessage, isLoading }) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              placeholder={isLoading ? 'AskAnything is thinking...' : 'Ask a question or type a message...'}
+              placeholder={isLoading ? 'Askio is thinking...' : 'Ask a question or type a message...'}
               className="w-full resize-none bg-transparent text-[#172033] placeholder-[#64748B] text-sm sm:text-base focus:outline-hidden max-h-44 py-1 leading-relaxed"
             />
 
@@ -82,7 +82,7 @@ export default function ChatInput({ onSendMessage, isLoading }) {
               </kbd>
               <span>for new line</span>
             </span>
-            <span>AskAnything powered by Groq Llama</span>
+            <span>Askio powered by Groq Llama</span>
           </div>
         </form>
       </div>

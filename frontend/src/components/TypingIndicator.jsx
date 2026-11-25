@@ -16,7 +16,7 @@ export default function TypingIndicator() {
           <span className="w-2 h-2 rounded-full bg-blue-600 animate-bounce"></span>
         </div>
         <span className="text-xs sm:text-sm font-medium text-[#64748B]">
-          AskAnything is thinking...
+          Askio is thinking...
         </span>
       </div>
     </div>

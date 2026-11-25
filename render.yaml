@@ -1,7 +1,7 @@
 services:
   # Backend Web Service (Flask + Gunicorn)
   - type: web
-    name: askanything-backend
+    name: askio-backend
     env: python
     rootDir: backend
     plan: free
@@ -13,13 +13,13 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: qwen/qwen3.8-27b
       - key: FRONTEND_URL
         value: "*"
 
   # Frontend Static Site (React + Vite)
   - type: web
-    name: askanything-frontend
+    name: askio-frontend
     env: static
     rootDir: frontend
     plan: free
@@ -29,5 +29,5 @@ services:
       - key: VITE_API_URL
         fromService:
           type: web
-          name: askanything-backend
+          name: askio-backend
           property: host

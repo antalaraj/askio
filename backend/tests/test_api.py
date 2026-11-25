@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from app import app
 from services.groq_service import sanitize_and_truncate_messages, SYSTEM_PROMPT
 
-class AskAnythingApiTestCase(unittest.TestCase):
+class AskioApiTestCase(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
 
@@ -91,7 +91,7 @@ class AskAnythingApiTestCase(unittest.TestCase):
         """Test successful chat completion via Groq SDK mock."""
         mock_instance = MagicMock()
         mock_choice = MagicMock()
-        mock_choice.message.content = "I am Groq AI assistant."
+        mock_choice.message.content = "I am Askio AI assistant."
         mock_completion = MagicMock()
         mock_completion.choices = [mock_choice]
         mock_instance.chat.completions.create.return_value = mock_completion
@@ -106,7 +106,7 @@ class AskAnythingApiTestCase(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             data = response.get_json()
             self.assertEqual(data.get("role"), "assistant")
-            self.assertEqual(data.get("content"), "I am Groq AI assistant.")
+            self.assertEqual(data.get("content"), "I am Askio AI assistant.")
 
 if __name__ == '__main__':
     unittest.main()

@@ -14,7 +14,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
-logger = logging.getLogger("AskAnything")
+logger = logging.getLogger("Askio")
 
 app = Flask(__name__)
 
@@ -37,7 +37,7 @@ def health_check():
 
     return jsonify({
         "status": "healthy",
-        "service": "AskAnything – AI Chat Assistant API",
+        "service": "Askio – AI Chat Assistant API",
         "groq_configured": api_key_configured,
         "model": model
     }), 200
@@ -115,5 +115,5 @@ def chat():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     debug = os.getenv("FLASK_DEBUG", "False").lower() in ("true", "1")
-    logger.info("Starting AskAnything backend on port %d...", port)
+    logger.info("Starting Askio backend on port %d...", port)
     app.run(host="0.0.0.0", port=port, debug=debug)

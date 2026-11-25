@@ -1,7 +1,7 @@
 @echo off
-title AskAnything - Frontend Dev Server
+title Askio - Frontend Dev Server
 echo ========================================================
-echo  Starting AskAnything Frontend Server (Vite + React)
+echo  Starting Askio Frontend Server (Vite + React)
 echo ========================================================
 cd /d "%~dp0frontend"
 npm run dev

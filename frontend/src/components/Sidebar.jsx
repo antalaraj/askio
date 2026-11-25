@@ -40,7 +40,7 @@ export default function Sidebar({
             </div>
             <div>
               <span className="font-bold text-sm text-[#172033] tracking-tight">
-                AskAnything
+                Askio
               </span>
               <span className="flex items-center gap-1 text-[10px] text-blue-600 font-semibold tracking-wide uppercase">
                 <Sparkles className="w-2.5 h-2.5" />
@@ -117,7 +117,7 @@ export default function Sidebar({
 
         {/* Footer */}
         <div className="p-3 border-t border-[#E2E8F0] bg-white text-[11px] text-slate-500 flex items-center justify-between">
-          <span>AskAnything v1.0</span>
+          <span>Askio v1.0</span>
           <span className="text-slate-400">• Groq Llama</span>
         </div>
       </aside>

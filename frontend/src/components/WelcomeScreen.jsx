@@ -32,10 +32,10 @@ export default function WelcomeScreen({ onSelectPrompt }) {
 
       {/* Heading & Subtitle */}
       <h2 className="text-2xl sm:text-3xl font-bold text-[#172033] tracking-tight mb-2">
-        AskAnything
+        Askio
       </h2>
       <p className="text-sm sm:text-base text-[#64748B] max-w-md mx-auto mb-8 leading-relaxed">
-        Your AI assistant for ideas, answers, and everything in between.
+        Your AI. Your Answers. Askio.
       </p>
 
       {/* Suggested Prompts Cards */}

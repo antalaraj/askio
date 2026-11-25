@@ -33,7 +33,7 @@ export default function ChatHeader({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-sm sm:text-base font-bold text-[#172033] tracking-tight truncate max-w-[180px] sm:max-w-xs md:max-w-md">
-                  {activeTitle || 'AskAnything'}
+                  {activeTitle || 'Askio'}
                 </h1>
               </div>
 
