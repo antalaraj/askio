@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
+import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import { AskioLogoIcon } from './AskioLogo';
 
@@ -349,7 +350,7 @@ export default function ChatMessage({
         {/* Markdown & KaTeX Math Body */}
         <div className="select-text">
           <ReactMarkdown
-            remarkPlugins={[remarkMath]}
+            remarkPlugins={[remarkGfm, remarkMath]}
             rehypePlugins={[rehypeKatex]}
             components={{
               h1: ({ children }) => <h1 className="text-xl font-bold text-slate-900 dark:text-white mt-4 mb-2">{children}</h1>,
