@@ -23,16 +23,14 @@ app = Flask(__name__)
 # Hard limit on incoming HTTP request payload (6 MB)
 app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
 
-# Configure CORS cleanly (avoid credentials=True with wildcard '*')
+# Configure CORS to permit all origins cleanly across environments
 frontend_env = os.getenv("FRONTEND_URL", "").strip()
 if frontend_env and frontend_env != "*":
-    allowed_origins = [origin.strip() for origin in frontend_env.split(",") if origin.strip()]
-    use_credentials = True
+    # Strip any trailing slashes from allowed origins to prevent CORS mismatch
+    allowed_origins = [origin.strip().rstrip('/') for origin in frontend_env.split(",") if origin.strip()]
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins, "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Accept"]}})
 else:
-    allowed_origins = "*"
-    use_credentials = False
-
-CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=use_credentials)
+    CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Accept"]}})
 
 # Lightweight per-IP sliding-window rate limiter (35 req/min)
 RATE_LIMIT_WINDOW = 60
