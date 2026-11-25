@@ -13,11 +13,14 @@ Built with a **React.js + Vite** frontend styled with **Tailwind CSS**, and back
    - Dynamic model support via `GROQ_MODEL` (default: `llama-3.3-70b-versatile` or `llama-3.1-8b-instant`).
    - Context-aware conversation history management with token-safe truncation.
 
-2. **Full Local Persistence**:
-   - Conversation history is automatically saved to browser `localStorage`.
-   - Messages remain intact across browser refreshes and tab closures.
+2. **Multi-Conversation Management & Persistence**:
+   - ChatGPT & Gemini style collapsible sidebar with full conversation history.
+   - Preserves previous conversations when starting a **New Chat** (never silently deletes past chats).
+   - Automatic conversation title generation from the first user prompt.
+   - Relative date grouping: **Today**, **Yesterday**, **Previous 7 Days**, and **Older**.
+   - Conversation management: switch, rename, and delete with safety confirmation dialogs.
+   - Seamless legacy migration from single-chat storage to multi-conversation format (`askanything_conversations_v1`).
    - Self-healing storage parser that filters corrupted payloads and temporary states.
-   - One-click **New Chat** button to cleanly reset the conversation.
 
 3. **Robust Loading & Error Handling**:
    - Animated typing indicator (`AskAnything is thinking...`).
@@ -73,21 +76,28 @@ askanything/
 │   │   ├── assets/
 │   │   │   └── logo.svg
 │   │   ├── components/
-│   │   │   ├── ChatHeader.jsx       # Sticky header with status & New Chat button
-│   │   │   ├── ChatMessage.jsx      # Message bubble with avatars & copy action
-│   │   │   ├── ChatInput.jsx        # Multiline auto-expanding message composer
-│   │   │   ├── TypingIndicator.jsx  # Animated 3-dot thinking state
-│   │   │   ├── WelcomeScreen.jsx    # Hero welcome state & suggested prompts
-│   │   │   └── ErrorMessage.jsx     # Alert banner with Retry and Dismiss buttons
+│   │   │   ├── Sidebar.jsx              # Collapsible conversation sidebar with date groups
+│   │   │   ├── ConversationItem.jsx     # Individual chat entry with active highlight & menu
+│   │   │   ├── ConversationMenu.jsx     # Three-dot dropdown (Rename / Delete)
+│   │   │   ├── RenameDialog.jsx         # Modal to rename conversation title
+│   │   │   ├── DeleteConfirmation.jsx   # Safety dialog confirming conversation deletion
+│   │   │   ├── ChatHeader.jsx           # Sticky header with sidebar toggle, status & New Chat
+│   │   │   ├── ChatMessage.jsx          # Message bubble with avatars, markdown & copy action
+│   │   │   ├── ChatInput.jsx            # Multiline auto-expanding message composer
+│   │   │   ├── TypingIndicator.jsx      # Animated 3-dot thinking state
+│   │   │   ├── WelcomeScreen.jsx        # Hero welcome state & suggested prompts
+│   │   │   └── ErrorMessage.jsx         # Alert banner with Retry and Dismiss buttons
 │   │   ├── hooks/
-│   │   │   └── useChat.js           # State, API orchestration, and persistence hook
+│   │   │   ├── useConversations.js      # Multi-conversation management and persistence hook
+│   │   │   └── useChat.js               # Active conversation chat and API orchestration hook
 │   │   ├── services/
-│   │   │   └── chatService.js       # Fetch client, timeout handling, error normalization
+│   │   │   └── chatService.js           # Fetch client, timeout handling, error normalization
 │   │   ├── utils/
-│   │   │   └── storage.js           # LocalStorage CRUD and validation utility
-│   │   ├── App.jsx                  # Root UI composition & auto-scrolling
-│   │   ├── main.jsx                 # React root entry
-│   │   └── index.css                # Tailwind CSS v4 setup & custom animations
+│   │   │   ├── conversationUtils.js     # Title generation, date grouping & ID generator
+│   │   │   └── storage.js               # Multi-conversation LocalStorage CRUD & migration
+│   │   ├── App.jsx                      # Root UI composition with sidebar layout
+│   │   ├── main.jsx                     # React root entry
+│   │   └── index.css                    # Tailwind CSS v4 setup & custom animations
 │   ├── .env.example
 │   ├── package.json
 │   └── vite.config.js

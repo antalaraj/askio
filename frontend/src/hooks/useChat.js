@@ -1,18 +1,27 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { loadChatHistory, saveChatHistory, clearChatHistory } from '../utils/storage';
 import { sendChatMessage, checkBackendHealth } from '../services/chatService';
 
 /**
- * Custom hook to manage chat state, persistence, network communication, and error handling.
+ * Custom hook to manage chat interaction, network communication, loading states, and error handling
+ * for the currently active conversation.
  */
-export function useChat() {
-  const [messages, setMessages] = useState(() => loadChatHistory());
+export function useChat({ activeConversation, updateActiveMessages }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [backendHealth, setBackendHealth] = useState({ status: 'checking', groq_configured: false });
 
   // Store the last sent user message for retry functionality
   const lastFailedUserMessageRef = useRef(null);
+  const activeConversationIdRef = useRef(activeConversation?.id);
+
+  // Clear errors when active conversation changes
+  useEffect(() => {
+    if (activeConversationIdRef.current !== activeConversation?.id) {
+      activeConversationIdRef.current = activeConversation?.id;
+      setError(null);
+      lastFailedUserMessageRef.current = null;
+    }
+  }, [activeConversation?.id]);
 
   // Check backend health on mount
   useEffect(() => {
@@ -27,10 +36,7 @@ export function useChat() {
     };
   }, []);
 
-  // Save messages to localStorage whenever they change
-  useEffect(() => {
-    saveChatHistory(messages);
-  }, [messages]);
+  const messages = activeConversation?.messages || [];
 
   /**
    * Internal function to send messages through backend API.
@@ -50,19 +56,18 @@ export function useChat() {
         timestamp: new Date().toISOString()
       };
 
-      // If it's a retry, we don't append a new duplicate user message to history
-      let updatedConversation;
+      let conversationToSend;
       if (isRetry) {
-        updatedConversation = [...messages];
+        conversationToSend = [...messages];
       } else {
-        updatedConversation = [...messages, userMessage];
-        setMessages(updatedConversation);
+        conversationToSend = [...messages, userMessage];
+        updateActiveMessages(conversationToSend);
       }
 
       lastFailedUserMessageRef.current = trimmed;
 
       try {
-        const assistantResponse = await sendChatMessage(updatedConversation);
+        const assistantResponse = await sendChatMessage(conversationToSend);
 
         const assistantMessage = {
           id: `asst-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -71,7 +76,9 @@ export function useChat() {
           timestamp: new Date().toISOString()
         };
 
-        setMessages((prev) => [...prev, assistantMessage]);
+        const finalConversation = [...conversationToSend, assistantMessage];
+        updateActiveMessages(finalConversation);
+
         lastFailedUserMessageRef.current = null;
         setError(null);
       } catch (err) {
@@ -85,7 +92,7 @@ export function useChat() {
         setIsLoading(false);
       }
     },
-    [messages, isLoading]
+    [messages, isLoading, updateActiveMessages]
   );
 
   /**
@@ -99,7 +106,7 @@ export function useChat() {
   );
 
   /**
-   * Retries the last failed message.
+   * Retries the last failed message in the current conversation.
    */
   const retryLastMessage = useCallback(() => {
     const lastMsg = lastFailedUserMessageRef.current || (error && error.lastUserMessage);
@@ -107,16 +114,6 @@ export function useChat() {
       executeSendMessage(lastMsg, true);
     }
   }, [executeSendMessage, error]);
-
-  /**
-   * Resets the entire conversation.
-   */
-  const clearChat = useCallback(() => {
-    clearChatHistory();
-    setMessages([]);
-    setError(null);
-    lastFailedUserMessageRef.current = null;
-  }, []);
 
   /**
    * Dismiss the error banner.
@@ -132,7 +129,6 @@ export function useChat() {
     backendHealth,
     sendMessage,
     retryLastMessage,
-    clearChat,
     dismissError
   };
 }
