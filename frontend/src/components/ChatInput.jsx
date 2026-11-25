@@ -127,15 +127,15 @@ export default function ChatInput({
         {/* Attached Document Pill */}
         {(attachedDocument || isUploading) && (
           <div className="mb-2.5 flex items-center gap-2 px-1 animate-fadeIn">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-xs font-medium shadow-2xs">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-[#282A2C] border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-medium shadow-2xs">
               {isUploading ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 dark:text-blue-400" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-600 dark:text-zinc-300" />
                   <span>Extracting document text...</span>
                 </>
               ) : (
                 <>
-                  <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <FileText className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300 shrink-0" />
                   <span className="truncate max-w-[200px] sm:max-w-xs font-semibold">
                     {attachedDocument.filename}
                   </span>
@@ -147,7 +147,7 @@ export default function ChatInput({
                   <button
                     type="button"
                     onClick={onRemoveDocument}
-                    className="p-0.5 rounded-md hover:bg-blue-200/60 dark:hover:bg-blue-500/30 transition-colors cursor-pointer"
+                    className="p-0.5 rounded-md hover:bg-zinc-200/80 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
                     title="Remove file"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -164,8 +164,8 @@ export default function ChatInput({
           className={`relative bg-[#F4F4F5] dark:bg-[#1E1F20] border ${
             isListening
               ? 'border-rose-400 dark:border-rose-500/70 ring-2 ring-rose-500/20'
-              : 'border-slate-200/90 dark:border-slate-700/60 focus-within:border-slate-300 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-blue-500/15'
-          } focus-within:bg-white dark:focus-within:bg-[#282A2C] focus-within:shadow-lg focus-within:shadow-slate-900/5 dark:focus-within:shadow-black/30 rounded-3xl transition-all duration-200 px-3.5 py-2.5 sm:px-4 sm:py-3`}
+              : 'border-zinc-200/90 dark:border-zinc-700/60 focus-within:border-zinc-400 dark:focus-within:border-zinc-500 focus-within:ring-2 focus-within:ring-zinc-900/5 dark:focus-within:ring-white/10'
+          } focus-within:bg-white dark:focus-within:bg-[#282A2C] focus-within:shadow-lg focus-within:shadow-zinc-900/5 dark:focus-within:shadow-black/30 rounded-3xl transition-all duration-200 px-3.5 py-2.5 sm:px-4 sm:py-3`}
         >
           <input
             ref={fileInputRef}
@@ -233,7 +233,7 @@ export default function ChatInput({
                 <button
                   type="button"
                   onClick={onStopGeneration}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-slate-900 dark:bg-white hover:bg-red-600 dark:hover:bg-red-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer transition-all"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-zinc-900 dark:bg-white hover:bg-zinc-700 dark:hover:bg-zinc-200 active:scale-95 text-white dark:text-zinc-900 shadow-sm cursor-pointer transition-all"
                   title="Stop generating"
                 >
                   <Square className="w-3.5 h-3.5 fill-current" />
@@ -244,8 +244,8 @@ export default function ChatInput({
                   disabled={isDisabled}
                   className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
                     isDisabled
-                      ? 'bg-slate-300/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-500 cursor-not-allowed'
-                      : 'bg-slate-900 dark:bg-white hover:bg-blue-600 dark:hover:bg-blue-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer'
+                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+                      : 'bg-zinc-900 dark:bg-white hover:bg-zinc-700 dark:hover:bg-zinc-200 active:scale-95 text-white dark:text-zinc-900 shadow-sm cursor-pointer'
                   }`}
                   title="Send message (Enter)"
                 >

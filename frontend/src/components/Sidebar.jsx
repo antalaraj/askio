@@ -76,7 +76,7 @@ export default function Sidebar({
             type="button"
             className="w-full flex items-center gap-2.5 py-2.5 px-3.5 rounded-xl bg-white dark:bg-[#282A2C] hover:bg-slate-100 dark:hover:bg-[#333537] border border-slate-200/80 dark:border-slate-700/60 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 shadow-2xs transition-all cursor-pointer group"
           >
-            <SquarePen className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform" />
+            <SquarePen className="w-4 h-4 text-zinc-700 dark:text-zinc-200 group-hover:scale-105 transition-transform" />
             <span>New chat</span>
           </button>
         </div>

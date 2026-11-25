@@ -121,7 +121,7 @@ export default function ChatHeader({
             className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-[#282A2C] hover:bg-slate-200/70 dark:hover:bg-[#333537] p-2 sm:px-2.5 sm:py-1.5 rounded-xl transition-colors cursor-pointer"
             title="New chat"
           >
-            <SquarePen className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-blue-600 dark:text-blue-400" />
+            <SquarePen className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-zinc-700 dark:text-zinc-200" />
             <span className="hidden sm:inline">New chat</span>
           </button>
         )}

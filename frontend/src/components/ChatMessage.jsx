@@ -318,7 +318,7 @@ export default function ChatMessage({
               onClick={() => setToolsExpanded((prev) => !prev)}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100/90 dark:bg-[#1E1F20] hover:bg-slate-200/70 dark:hover:bg-[#282A2C] border border-slate-200/80 dark:border-slate-700/60 text-[11px] font-medium text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
             >
-              <Zap className="w-3 h-3 text-indigo-500 dark:text-sky-400" />
+              <Zap className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
               <span>
                 Used {toolsUsed.map((k) => TOOL_LABELS[k]?.label || k).join(', ')}
               </span>
