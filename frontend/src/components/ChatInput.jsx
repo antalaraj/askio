@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, FileText, X, Loader2 } from 'lucide-react';
+import { ArrowUp, Paperclip, FileText, X, Loader2 } from 'lucide-react';
 
 export default function ChatInput({
   onSendMessage,
@@ -13,7 +13,6 @@ export default function ChatInput({
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Auto-resize textarea based on input content
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -47,40 +46,39 @@ export default function ChatInput({
     if (file && onFileUpload) {
       onFileUpload(file);
     }
-    // Reset input so same file can be re-selected if removed
     e.target.value = '';
   };
 
   const isDisabled = !input.trim() || isLoading || isUploading;
 
   return (
-    <div className="sticky bottom-0 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/95 to-transparent pt-3 pb-4 sm:pb-6 px-4 sm:px-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="sticky bottom-0 z-20 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#131314] dark:via-[#131314]/95 pt-3 pb-3 sm:pb-5 px-3 sm:px-6 transition-colors">
+      <div className="max-w-3xl mx-auto">
         {/* Attached Document Pill */}
         {(attachedDocument || isUploading) && (
-          <div className="mb-2 flex items-center gap-2 animate-fadeIn">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium shadow-xs">
+          <div className="mb-2.5 flex items-center gap-2 px-1 animate-fadeIn">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-xs font-medium shadow-2xs">
               {isUploading ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 dark:text-blue-400" />
                   <span>Extracting document text...</span>
                 </>
               ) : (
                 <>
-                  <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                   <span className="truncate max-w-[200px] sm:max-w-xs font-semibold">
                     {attachedDocument.filename}
                   </span>
                   {attachedDocument.page_count > 1 && (
-                    <span className="text-[10px] text-blue-500">
+                    <span className="text-[10px] opacity-80">
                       ({attachedDocument.page_count} pages)
                     </span>
                   )}
                   <button
                     type="button"
                     onClick={onRemoveDocument}
-                    className="p-0.5 rounded-md hover:bg-blue-200/60 text-blue-600 transition-colors cursor-pointer"
-                    title="Remove attached document"
+                    className="p-0.5 rounded-md hover:bg-blue-200/60 dark:hover:bg-blue-500/30 transition-colors cursor-pointer"
+                    title="Remove file"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -90,77 +88,74 @@ export default function ChatInput({
           </div>
         )}
 
+        {/* ChatGPT / Gemini Floating Pill Composer */}
         <form
           onSubmit={handleSubmit}
-          className="relative bg-white border border-[#E2E8F0] focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/15 rounded-2xl shadow-sm transition-all overflow-hidden flex flex-col"
+          className="relative bg-[#F4F4F5] dark:bg-[#1E1F20] border border-slate-200/80 dark:border-slate-700/60 focus-within:bg-white dark:focus-within:bg-[#282A2C] focus-within:border-slate-300 dark:focus-within:border-slate-600 focus-within:shadow-lg focus-within:shadow-slate-900/5 dark:focus-within:shadow-black/30 rounded-3xl transition-all duration-200 px-3.5 py-2.5 sm:px-4 sm:py-3"
         >
-          <div className="flex items-end px-2.5 py-2 sm:px-3.5 sm:py-2.5 gap-2">
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.txt,.md,.csv,.json"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.txt,.md,.csv,.json"
+            onChange={handleFileChange}
+            className="hidden"
+          />
 
-            {/* Upload Button */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading || isUploading}
-              className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Attach PDF, TXT, MD, CSV, or JSON document"
-            >
-              <Paperclip className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-            </button>
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            placeholder={
+              isLoading
+                ? 'Askio is thinking...'
+                : attachedDocument
+                ? `Ask about ${attachedDocument.filename}...`
+                : 'Message Askio...'
+            }
+            className="w-full resize-none bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 text-sm sm:text-[15px] focus:outline-hidden max-h-44 px-1 py-1 leading-relaxed"
+          />
 
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isLoading}
-              placeholder={
-                isLoading
-                  ? 'Askio is thinking...'
-                  : attachedDocument
-                  ? `Ask a question about ${attachedDocument.filename}...`
-                  : 'Ask anything — web search, math, code, weather, or upload a file...'
-              }
-              className="w-full resize-none bg-transparent text-[#172033] placeholder-[#64748B] text-sm sm:text-base focus:outline-hidden max-h-44 py-1.5 leading-relaxed"
-            />
+          {/* Bottom Composer Action Bar */}
+          <div className="flex items-center justify-between pt-1.5 mt-1">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading || isUploading}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700/60 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Upload PDF, TXT, MD, CSV, or JSON"
+              >
+                <Paperclip className="w-4 h-4" />
+                <span className="hidden xs:inline">Attach</span>
+              </button>
+
+              <span className="hidden sm:inline text-[11px] text-slate-400 dark:text-slate-500">
+                Web Search • Math • Python • Docs
+              </span>
+            </div>
 
             <button
               type="submit"
               disabled={isDisabled}
-              className={`shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all ${
+              className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
                 isDisabled
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
-                  : 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-sm shadow-blue-500/30 cursor-pointer'
+                  ? 'bg-slate-300/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-500 cursor-not-allowed'
+                  : 'bg-slate-900 dark:bg-white hover:bg-blue-600 dark:hover:bg-blue-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer'
               }`}
               title="Send message (Enter)"
             >
-              <Send className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+              <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
             </button>
           </div>
-
-          <div className="hidden sm:flex items-center justify-between px-4 pb-2 pt-0 text-[11px] text-[#64748B] border-t border-slate-50">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 text-[10px] bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono">
-                Enter
-              </kbd>
-              <span>to send</span>
-              <span className="mx-1">•</span>
-              <kbd className="px-1.5 py-0.5 text-[10px] bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono">
-                Shift + Enter
-              </kbd>
-              <span>for new line</span>
-            </span>
-            <span>Askio • Tools & Groq AI</span>
-          </div>
         </form>
+
+        {/* Minimal Disclaimer */}
+        <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+          Askio can make mistakes and uses live tools. Check important info.
+        </p>
       </div>
     </div>
   );

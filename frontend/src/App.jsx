@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ArrowDown } from 'lucide-react';
 import { useConversations } from './hooks/useConversations';
 import { useChat } from './hooks/useChat';
+import { useTheme } from './hooks/useTheme';
 import { getClientContext, requestBrowserLocation, initLocationIfGranted } from './utils/location';
 import Sidebar from './components/Sidebar';
 import ChatHeader from './components/ChatHeader';
@@ -13,6 +15,8 @@ import RenameDialog from './components/RenameDialog';
 import DeleteConfirmation from './components/DeleteConfirmation';
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
+
   const {
     conversations,
     activeConversationId,
@@ -42,22 +46,20 @@ export default function App() {
     updateActiveMessages
   });
 
-  // Sidebar visibility (open by default on desktop, closed on mobile)
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth >= 768 : true;
   });
 
-  // Modal dialog states
   const [renameTarget, setRenameTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-
-  // Client context & location state
   const [clientContext, setClientContext] = useState(() => getClientContext());
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
 
-  // Initialize location on mount if granted
+  const mainScrollRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
   useEffect(() => {
     initLocationIfGranted();
-    // Update client context state if location captured
     const timer = setTimeout(() => {
       setClientContext(getClientContext());
     }, 1200);
@@ -69,20 +71,28 @@ export default function App() {
     setClientContext(getClientContext());
   }, []);
 
-  const messagesEndRef = useRef(null);
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  }, []);
 
-  // Auto-scroll to latest message or typing indicator
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading, error]);
+    scrollToBottom('smooth');
+  }, [messages, isLoading, error, scrollToBottom]);
+
+  const handleScroll = () => {
+    const el = mainScrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollBottom(distanceFromBottom > 180);
+  };
 
   const handleNewChat = () => {
     createNewConversation();
   };
 
   return (
-    <div className="flex h-screen min-h-screen bg-[#F8FAFC] overflow-hidden text-[#172033]">
-      {/* Collapsible Sidebar */}
+    <div className="flex h-screen min-h-screen bg-white dark:bg-[#131314] text-slate-900 dark:text-[#E3E3E3] overflow-hidden transition-colors">
+      {/* Collapsible ChatGPT / Gemini Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -94,9 +104,8 @@ export default function App() {
         onOpenDelete={(conv) => setDeleteTarget(conv)}
       />
 
-      {/* Main Chat Interface */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-        {/* Header */}
+      {/* Main Chat Workspace */}
+      <div className="relative flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         <ChatHeader
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           isSidebarOpen={isSidebarOpen}
@@ -105,15 +114,21 @@ export default function App() {
           activeTitle={activeConversation?.title}
           locationInfo={clientContext}
           onRequestLocation={handleRequestLocation}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
 
-        {/* Conversation Message Stream */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
-          <div className="max-w-4xl mx-auto flex flex-col min-h-full">
+        {/* Scrollable Message Stream */}
+        <main
+          ref={mainScrollRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto px-3 sm:px-6 py-4"
+        >
+          <div className="max-w-3xl mx-auto flex flex-col min-h-full">
             {messages.length === 0 ? (
               <WelcomeScreen onSelectPrompt={(prompt) => sendMessage(prompt)} />
             ) : (
-              <div className="flex-1 flex flex-col justify-start">
+              <div className="flex-1 flex flex-col justify-start pb-4">
                 {messages.map((msg) => (
                   <ChatMessage key={msg.id} message={msg} />
                 ))}
@@ -131,12 +146,25 @@ export default function App() {
               />
             )}
 
-            {/* Dummy element for auto-scroll */}
-            <div ref={messagesEndRef} className="h-2" />
+            <div ref={messagesEndRef} className="h-4" />
           </div>
         </main>
 
-        {/* Sticky Message Input Composer */}
+        {/* Floating Scroll-to-Bottom Button */}
+        {showScrollBottom && messages.length > 0 && (
+          <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-20 animate-fadeIn">
+            <button
+              type="button"
+              onClick={() => scrollToBottom('smooth')}
+              className="w-8 h-8 rounded-full bg-white dark:bg-[#282A2C] border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 transition-all cursor-pointer"
+              title="Scroll to latest"
+            >
+              <ArrowDown className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Floating Pill Composer */}
         <ChatInput
           onSendMessage={sendMessage}
           isLoading={isLoading}
