@@ -37,6 +37,9 @@ export default function App() {
     error,
     backendHealth,
     sendMessage,
+    stopGeneration,
+    editUserMessage,
+    regenerateResponse,
     retryLastMessage,
     dismissError,
     handleFileUpload,
@@ -90,6 +93,30 @@ export default function App() {
     createNewConversation();
   };
 
+  const handleExportChat = useCallback(() => {
+    if (!activeConversation || messages.length === 0) return;
+    const title = activeConversation.title || 'Askio Conversation';
+    const lines = [`# ${title}\n`, `_Exported from Askio on ${new Date().toLocaleString()}_\n\n---\n`];
+    messages.forEach((m) => {
+      const sender = m.role === 'user' ? 'User' : 'Askio';
+      lines.push(`### ${sender}\n\n${m.content}\n`);
+      if (Array.isArray(m.sources) && m.sources.length > 0) {
+        lines.push('**Sources:**\n' + m.sources.map((s) => `- [${s.title || s.url}](${s.url})`).join('\n') + '\n');
+      }
+      lines.push('---\n');
+    });
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [activeConversation, messages]);
+
   return (
     <div className="flex h-screen min-h-screen bg-white dark:bg-[#131314] text-slate-900 dark:text-[#E3E3E3] overflow-hidden transition-colors">
       {/* Collapsible ChatGPT / Gemini Sidebar */}
@@ -116,6 +143,8 @@ export default function App() {
           onRequestLocation={handleRequestLocation}
           theme={theme}
           onToggleTheme={toggleTheme}
+          hasMessages={messages.length > 0}
+          onExportChat={handleExportChat}
         />
 
         {/* Scrollable Message Stream */}
@@ -130,7 +159,13 @@ export default function App() {
             ) : (
               <div className="flex-1 flex flex-col justify-start pb-4">
                 {messages.map((msg) => (
-                  <ChatMessage key={msg.id} message={msg} />
+                  <ChatMessage
+                    key={msg.id}
+                    message={msg}
+                    onEditMessage={editUserMessage}
+                    onRegenerate={regenerateResponse}
+                    isLoading={isLoading}
+                  />
                 ))}
 
                 {isLoading && <TypingIndicator statusText={loadingStatus} />}
@@ -167,6 +202,7 @@ export default function App() {
         {/* Floating Pill Composer */}
         <ChatInput
           onSendMessage={sendMessage}
+          onStopGeneration={stopGeneration}
           isLoading={isLoading}
           isUploading={isUploading}
           attachedDocument={attachedDocument}

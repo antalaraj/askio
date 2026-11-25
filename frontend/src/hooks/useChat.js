@@ -17,8 +17,8 @@ function inferLoadingStatus(text, hasDoc) {
 }
 
 /**
- * Custom hook to manage chat interaction, tool orchestration, file attachments,
- * loading states, and error handling for the currently active conversation.
+ * Custom hook to manage chat interaction, tool orchestration, message editing,
+ * response regeneration, stop generation, and file attachments.
  */
 export function useChat({ activeConversation, updateActiveMessages }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -30,11 +30,17 @@ export function useChat({ activeConversation, updateActiveMessages }) {
 
   const lastFailedUserMessageRef = useRef(null);
   const activeConversationIdRef = useRef(activeConversation?.id);
+  const abortControllerRef = useRef(null);
 
-  // Clear errors and transient attachments when active conversation changes
+  // Abort active generation & reset transient states when switching conversations
   useEffect(() => {
     if (activeConversationIdRef.current !== activeConversation?.id) {
       activeConversationIdRef.current = activeConversation?.id;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      setIsLoading(false);
       setError(null);
       setAttachedDocument(null);
       lastFailedUserMessageRef.current = null;
@@ -56,9 +62,6 @@ export function useChat({ activeConversation, updateActiveMessages }) {
 
   const messages = activeConversation?.messages || [];
 
-  /**
-   * Uploads a document to backend for text extraction and attaches it to current chat session.
-   */
   const handleFileUpload = useCallback(async (file) => {
     if (!file) return;
     setError(null);
@@ -81,41 +84,39 @@ export function useChat({ activeConversation, updateActiveMessages }) {
   }, []);
 
   /**
-   * Internal function to send messages through backend API.
+   * Stops the active AI generation cleanly.
    */
-  const executeSendMessage = useCallback(
-    async (userText, isRetry = false) => {
-      const trimmed = userText.trim();
-      if (!trimmed || isLoading) return;
+  const stopGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+  }, []);
+
+  /**
+   * Core helper to execute a chat completion against a specific conversation snapshot.
+   */
+  const runInference = useCallback(
+    async (conversationSnapshot, lastUserText) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
       setError(null);
-      setLoadingStatus(inferLoadingStatus(trimmed, Boolean(attachedDocument)));
+      setLoadingStatus(inferLoadingStatus(lastUserText, Boolean(attachedDocument)));
       setIsLoading(true);
-
-      const userMessage = {
-        id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        role: 'user',
-        content: trimmed,
-        attachedFileName: attachedDocument?.filename || undefined,
-        timestamp: new Date().toISOString()
-      };
-
-      let conversationToSend;
-      if (isRetry) {
-        conversationToSend = [...messages];
-      } else {
-        conversationToSend = [...messages, userMessage];
-        updateActiveMessages(conversationToSend);
-      }
-
-      lastFailedUserMessageRef.current = trimmed;
+      lastFailedUserMessageRef.current = lastUserText;
 
       try {
         const clientContext = getClientContext();
         const assistantResponse = await sendChatMessage(
-          conversationToSend,
+          conversationSnapshot,
           clientContext,
-          attachedDocument
+          attachedDocument,
+          controller.signal
         );
 
         const assistantMessage = {
@@ -127,36 +128,110 @@ export function useChat({ activeConversation, updateActiveMessages }) {
           timestamp: new Date().toISOString()
         };
 
-        const finalConversation = [...conversationToSend, assistantMessage];
+        const finalConversation = [...conversationSnapshot, assistantMessage];
         updateActiveMessages(finalConversation);
 
         lastFailedUserMessageRef.current = null;
         setError(null);
       } catch (err) {
+        if (err.isAborted) {
+          // User pressed Stop: exit silently without error banner
+          return;
+        }
         console.error('Chat error:', err);
         setError({
           message: err.message || 'An unexpected error occurred.',
           canRetry: err.canRetry !== false,
-          lastUserMessage: trimmed
+          lastUserMessage: lastUserText
         });
       } finally {
-        setIsLoading(false);
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+          setIsLoading(false);
+        }
       }
     },
-    [messages, isLoading, attachedDocument, updateActiveMessages]
+    [attachedDocument, updateActiveMessages]
   );
 
+  /**
+   * Send a new user message.
+   */
   const sendMessage = useCallback(
-    (text) => executeSendMessage(text, false),
-    [executeSendMessage]
+    async (userText) => {
+      const trimmed = userText.trim();
+      if (!trimmed || isLoading) return;
+
+      const userMessage = {
+        id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        role: 'user',
+        content: trimmed,
+        attachedFileName: attachedDocument?.filename || undefined,
+        timestamp: new Date().toISOString()
+      };
+
+      const updatedConversation = [...messages, userMessage];
+      updateActiveMessages(updatedConversation);
+
+      await runInference(updatedConversation, trimmed);
+    },
+    [messages, isLoading, attachedDocument, updateActiveMessages, runInference]
   );
 
+  /**
+   * Edit an existing user message, branch from that point, and regenerate the response.
+   */
+  const editUserMessage = useCallback(
+    async (messageId, newContent) => {
+      const trimmed = (newContent || '').trim();
+      if (!trimmed || isLoading) return;
+
+      const idx = messages.findIndex((m) => m.id === messageId && m.role === 'user');
+      if (idx === -1) return;
+
+      const updatedMsg = {
+        ...messages[idx],
+        content: trimmed,
+        editedAt: new Date().toISOString()
+      };
+
+      const branchedConversation = [...messages.slice(0, idx), updatedMsg];
+      updateActiveMessages(branchedConversation);
+
+      await runInference(branchedConversation, trimmed);
+    },
+    [messages, isLoading, updateActiveMessages, runInference]
+  );
+
+  /**
+   * Regenerate an assistant response from the preceding user prompt.
+   */
+  const regenerateResponse = useCallback(
+    async (assistantMessageId) => {
+      if (isLoading) return;
+
+      const idx = messages.findIndex((m) => m.id === assistantMessageId && m.role === 'assistant');
+      if (idx <= 0) return;
+
+      const truncatedConversation = messages.slice(0, idx);
+      const lastUserMsg = [...truncatedConversation].reverse().find((m) => m.role === 'user');
+      if (!lastUserMsg) return;
+
+      updateActiveMessages(truncatedConversation);
+      await runInference(truncatedConversation, lastUserMsg.content);
+    },
+    [messages, isLoading, updateActiveMessages, runInference]
+  );
+
+  /**
+   * Retry the last failed request.
+   */
   const retryLastMessage = useCallback(() => {
     const lastMsg = lastFailedUserMessageRef.current || (error && error.lastUserMessage);
-    if (lastMsg) {
-      executeSendMessage(lastMsg, true);
+    if (lastMsg && !isLoading) {
+      runInference(messages, lastMsg);
     }
-  }, [executeSendMessage, error]);
+  }, [messages, isLoading, error, runInference]);
 
   const dismissError = useCallback(() => {
     setError(null);
@@ -171,6 +246,9 @@ export function useChat({ activeConversation, updateActiveMessages }) {
     error,
     backendHealth,
     sendMessage,
+    stopGeneration,
+    editUserMessage,
+    regenerateResponse,
     retryLastMessage,
     dismissError,
     handleFileUpload,

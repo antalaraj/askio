@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles,
   Copy,
   Check,
+  Pencil,
+  RotateCcw,
   Globe,
   Calculator,
   Terminal,
@@ -62,9 +64,25 @@ function CodeBlock({ language, value }) {
   );
 }
 
-export default function ChatMessage({ message }) {
+export default function ChatMessage({
+  message,
+  onEditMessage,
+  onRegenerate,
+  isLoading
+}) {
   const isAssistant = message.role === 'assistant';
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(message.content);
+  const editTextareaRef = useRef(null);
+
+  useEffect(() => {
+    if (isEditing && editTextareaRef.current) {
+      editTextareaRef.current.focus();
+      editTextareaRef.current.style.height = 'auto';
+      editTextareaRef.current.style.height = `${Math.min(editTextareaRef.current.scrollHeight, 220)}px`;
+    }
+  }, [isEditing, editText]);
 
   const handleCopy = async () => {
     try {
@@ -73,6 +91,37 @@ export default function ChatMessage({ message }) {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy message:', err);
+    }
+  };
+
+  const handleStartEdit = () => {
+    setEditText(message.content);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditText(message.content);
+  };
+
+  const handleSaveEdit = () => {
+    const trimmed = editText.trim();
+    if (!trimmed || isLoading) return;
+    setIsEditing(false);
+    if (onEditMessage && trimmed !== message.content) {
+      onEditMessage(message.id, trimmed);
+    } else if (onEditMessage && trimmed === message.content) {
+      // Even if unchanged, allow re-submitting to re-run from this message
+      onEditMessage(message.id, trimmed);
+    }
+  };
+
+  const handleEditKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
     }
   };
 
@@ -87,9 +136,43 @@ export default function ChatMessage({ message }) {
   const sources = Array.isArray(message.sources) ? message.sources : [];
 
   if (!isAssistant) {
-    // User Message: ChatGPT / Gemini style right-aligned soft pill
+    // User Message: ChatGPT / Gemini style right-aligned soft pill + inline edit mode
+    if (isEditing) {
+      return (
+        <div className="flex justify-end my-4 w-full animate-fadeIn">
+          <div className="w-full max-w-2xl rounded-2xl bg-[#F4F4F5] dark:bg-[#282A2C] border border-blue-400/60 dark:border-blue-500/50 p-3.5 shadow-sm">
+            <textarea
+              ref={editTextareaRef}
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              rows={2}
+              className="w-full resize-none bg-transparent text-slate-900 dark:text-slate-100 text-sm sm:text-[15px] leading-relaxed focus:outline-hidden"
+            />
+            <div className="flex items-center justify-end gap-2 mt-2.5 pt-2 border-t border-slate-200/70 dark:border-slate-700/60">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={!editText.trim() || isLoading}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-blue-600 dark:hover:bg-blue-400 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Save & Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex justify-end my-4 w-full animate-fadeIn">
+      <div className="group flex flex-col items-end my-4 w-full animate-fadeIn">
         <div className="max-w-[85%] sm:max-w-[75%] flex flex-col items-end gap-1.5">
           {message.attachedFileName && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-500/30 text-xs font-medium text-blue-700 dark:text-blue-300">
@@ -101,6 +184,32 @@ export default function ChatMessage({ message }) {
           <div className="rounded-3xl rounded-br-md px-5 py-3 bg-[#F3F4F6] dark:bg-[#2F2F2F] text-slate-900 dark:text-slate-100 text-sm sm:text-[15px] leading-relaxed break-words shadow-2xs">
             <div className="whitespace-pre-wrap select-text">{message.content}</div>
           </div>
+        </div>
+
+        {/* User Message Hover Actions (Edit & Copy) */}
+        <div className="flex items-center gap-1 mt-1 pr-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-slate-400 dark:text-slate-500">
+          {message.editedAt && <span className="mr-1 italic">(edited)</span>}
+
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            title="Copy message"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+
+          {onEditMessage && (
+            <button
+              type="button"
+              onClick={handleStartEdit}
+              disabled={isLoading}
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Edit message"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     );
@@ -212,8 +321,8 @@ export default function ChatMessage({ message }) {
           </div>
         )}
 
-        {/* Action Toolbar: Copy & Timestamp */}
-        <div className="flex items-center gap-3 mt-2.5 text-xs text-slate-400 dark:text-slate-500">
+        {/* Action Toolbar: Copy, Regenerate & Timestamp */}
+        <div className="flex items-center gap-2 mt-2.5 text-xs text-slate-400 dark:text-slate-500">
           <button
             onClick={handleCopy}
             type="button"
@@ -233,7 +342,20 @@ export default function ChatMessage({ message }) {
             )}
           </button>
 
-          {formattedTime && <span className="text-[11px]">{formattedTime}</span>}
+          {onRegenerate && (
+            <button
+              onClick={() => onRegenerate(message.id)}
+              disabled={isLoading}
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Regenerate response"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Regenerate</span>
+            </button>
+          )}
+
+          {formattedTime && <span className="text-[11px] ml-1">{formattedTime}</span>}
         </div>
       </div>
     </div>

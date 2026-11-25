@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowUp, Paperclip, FileText, X, Loader2 } from 'lucide-react';
+import { ArrowUp, Square, Paperclip, FileText, X, Loader2 } from 'lucide-react';
 
 export default function ChatInput({
   onSendMessage,
+  onStopGeneration,
   isLoading,
   isUploading,
   attachedDocument,
@@ -137,18 +138,29 @@ export default function ChatInput({
               </span>
             </div>
 
-            <button
-              type="submit"
-              disabled={isDisabled}
-              className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
-                isDisabled
-                  ? 'bg-slate-300/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-500 cursor-not-allowed'
-                  : 'bg-slate-900 dark:bg-white hover:bg-blue-600 dark:hover:bg-blue-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer'
-              }`}
-              title="Send message (Enter)"
-            >
-              <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
-            </button>
+            {isLoading ? (
+              <button
+                type="button"
+                onClick={onStopGeneration}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-slate-900 dark:bg-white hover:bg-red-600 dark:hover:bg-red-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer transition-all"
+                title="Stop generating"
+              >
+                <Square className="w-3.5 h-3.5 fill-current" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isDisabled}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
+                  isDisabled
+                    ? 'bg-slate-300/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-500 cursor-not-allowed'
+                    : 'bg-slate-900 dark:bg-white hover:bg-blue-600 dark:hover:bg-blue-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer'
+                }`}
+                title="Send message (Enter)"
+              >
+                <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
+              </button>
+            )}
           </div>
         </form>
 

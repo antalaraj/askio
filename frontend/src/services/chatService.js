@@ -10,11 +10,12 @@ const DEFAULT_TIMEOUT_MS = 45000; // 45-second timeout for multi-step tool calls
  * Custom error class for API errors.
  */
 export class ChatApiError extends Error {
-  constructor(message, status = 500, canRetry = true) {
+  constructor(message, status = 500, canRetry = true, isAborted = false) {
     super(message);
     this.name = 'ChatApiError';
     this.status = status;
     this.canRetry = canRetry;
+    this.isAborted = isAborted;
   }
 }
 
@@ -49,9 +50,30 @@ export async function checkBackendHealth() {
  * @param {Array<{ role: string, content: string }>} messages
  * @returns {Promise<{ role: string, content: string }>}
  */
-export async function sendChatMessage(messages, clientInfo = null, documentContext = null) {
+export async function sendChatMessage(
+  messages,
+  clientInfo = null,
+  documentContext = null,
+  externalSignal = null
+) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, DEFAULT_TIMEOUT_MS);
+
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      clearTimeout(timeoutId);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
+      throw new ChatApiError('Generation stopped by user.', 499, false, true);
+    }
+    externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+  }
 
   try {
     // Only send role and content to the backend API
@@ -82,6 +104,9 @@ export async function sendChatMessage(messages, clientInfo = null, documentConte
     });
 
     clearTimeout(timeoutId);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
 
     let data;
     try {
@@ -107,12 +132,18 @@ export async function sendChatMessage(messages, clientInfo = null, documentConte
     };
   } catch (err) {
     clearTimeout(timeoutId);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
 
     if (err instanceof ChatApiError) {
       throw err;
     }
 
     if (err.name === 'AbortError') {
+      if (!timedOut && externalSignal?.aborted) {
+        throw new ChatApiError('Generation stopped by user.', 499, false, true);
+      }
       throw new ChatApiError(
         'The response is taking longer than expected. Please try again.',
         504,

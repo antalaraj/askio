@@ -1,5 +1,5 @@
 import React from 'react';
-import { SquarePen, PanelLeftOpen, Menu, MapPin, Sun, Moon, Sparkles } from 'lucide-react';
+import { SquarePen, PanelLeftOpen, Menu, MapPin, Sun, Moon, Sparkles, Download } from 'lucide-react';
 
 export default function ChatHeader({
   onToggleSidebar,
@@ -10,7 +10,9 @@ export default function ChatHeader({
   locationInfo,
   onRequestLocation,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  hasMessages,
+  onExportChat
 }) {
   const isOnline = backendHealth?.status === 'healthy';
   const hasLocation = Boolean(locationInfo?.location);
@@ -83,6 +85,18 @@ export default function ChatHeader({
           <MapPin className={`w-3.5 h-3.5 ${hasLocation ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
           <span className="hidden sm:inline max-w-[110px] truncate">{locationText}</span>
         </button>
+
+        {/* Export Conversation Button */}
+        {hasMessages && onExportChat && (
+          <button
+            onClick={onExportChat}
+            type="button"
+            className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#282A2C] transition-colors cursor-pointer"
+            title="Export conversation as Markdown"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Theme Toggle Button */}
         <button
