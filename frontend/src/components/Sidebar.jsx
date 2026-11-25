@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Sparkles, SquarePen, PanelLeftClose, Search, X } from 'lucide-react';
+import { SquarePen, PanelLeftClose, Search, X } from 'lucide-react';
+import { AskioLogoIcon, AskioWordmark } from './AskioLogo';
 import ConversationItem from './ConversationItem';
 import { groupConversationsByDate } from '../utils/conversationUtils';
 
@@ -47,12 +48,8 @@ export default function Sidebar({
         {/* Top Row: Brand & Collapse */}
         <div className="flex items-center justify-between px-3.5 py-3">
           <div className="flex items-center gap-2.5 px-1">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xs">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <span className="font-bold text-sm text-slate-900 dark:text-slate-100 tracking-tight">
-              Askio
-            </span>
+            <AskioLogoIcon className="w-7 h-7 rounded-lg shadow-xs shrink-0" />
+            <AskioWordmark className="text-base" />
           </div>
 
           <button

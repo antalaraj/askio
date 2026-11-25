@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Sparkles,
   Copy,
   Check,
   Pencil,
@@ -14,6 +13,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { AskioLogoIcon } from './AskioLogo';
 
 const TOOL_LABELS = {
   web_search: { label: 'Web Search', icon: Globe },
@@ -68,13 +68,46 @@ export default function ChatMessage({
   message,
   onEditMessage,
   onRegenerate,
-  isLoading
+  isLoading,
+  isNew = false
 }) {
   const isAssistant = message.role === 'assistant';
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.content);
+  const [displayedContent, setDisplayedContent] = useState(() =>
+    isAssistant && isNew ? '' : message.content
+  );
+  const [isStreaming, setIsStreaming] = useState(Boolean(isAssistant && isNew));
   const editTextareaRef = useRef(null);
+
+  // Smooth ChatGPT / Gemini style progressive text reveal for newly arrived assistant replies
+  useEffect(() => {
+    if (!isAssistant || !isNew) {
+      setDisplayedContent(message.content);
+      setIsStreaming(false);
+      return;
+    }
+
+    const fullText = message.content || '';
+    let index = 0;
+    setIsStreaming(true);
+
+    // Adaptive chunk size so short replies feel smooth and long replies finish in ~1.2s
+    const step = Math.max(4, Math.ceil(fullText.length / 65));
+    const timer = setInterval(() => {
+      index += step;
+      if (index >= fullText.length) {
+        setDisplayedContent(fullText);
+        setIsStreaming(false);
+        clearInterval(timer);
+      } else {
+        setDisplayedContent(fullText.slice(0, index));
+      }
+    }, 16);
+
+    return () => clearInterval(timer);
+  }, [message.id, message.content, isAssistant, isNew]);
 
   useEffect(() => {
     if (isEditing && editTextareaRef.current) {
@@ -172,7 +205,7 @@ export default function ChatMessage({
     }
 
     return (
-      <div className="group flex flex-col items-end my-4 w-full animate-fadeIn">
+      <div className="group flex flex-col items-end my-4 w-full animate-messageIn">
         <div className="max-w-[85%] sm:max-w-[75%] flex flex-col items-end gap-1.5">
           {message.attachedFileName && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-500/30 text-xs font-medium text-blue-700 dark:text-blue-300">
@@ -217,10 +250,10 @@ export default function ChatMessage({
 
   // Assistant Message: Borderless Editorial Layout like ChatGPT / Gemini
   return (
-    <div className="group flex gap-3.5 sm:gap-4 my-5 w-full justify-start animate-fadeIn">
-      {/* Assistant Sparkle Avatar */}
-      <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs mt-0.5">
-        <Sparkles className="w-4 h-4" />
+    <div className="group flex gap-3.5 sm:gap-4 my-5 w-full justify-start animate-messageIn">
+      {/* Askio Brand Avatar */}
+      <div className="shrink-0 mt-0.5">
+        <AskioLogoIcon className="w-8 h-8 rounded-lg shadow-xs" animated={isStreaming} />
       </div>
 
       {/* Editorial Content Area */}
@@ -293,8 +326,11 @@ export default function ChatMessage({
               }
             }}
           >
-            {message.content}
+            {displayedContent}
           </ReactMarkdown>
+          {isStreaming && (
+            <span className="inline-block w-2 h-4 ml-1 align-middle bg-indigo-500 dark:bg-sky-400 rounded-xs animate-pulse" />
+          )}
         </div>
 
         {/* Clickable Source Citations */}

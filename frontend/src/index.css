@@ -31,34 +31,116 @@
   }
 }
 
-@keyframes pulseSoft {
-  0%, 100% {
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
   }
   50% {
-    opacity: 0.6;
-    transform: scale(0.95);
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes sparkleTwinkle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.22) rotate(12deg);
+    opacity: 0.8;
+  }
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.65));
+  }
+}
+
+@keyframes geminiShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes orbitSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-pulseSoft {
-  animation: pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.animate-messageIn {
+  animation: messageIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Gemini-inspired subtle gradient text */
+.animate-floatSlow {
+  animation: floatSlow 4s ease-in-out infinite;
+}
+
+.animate-sparkleTwinkle {
+  animation: sparkleTwinkle 1.6s ease-in-out infinite;
+}
+
+.animate-logoPulse {
+  animation: logoPulse 2s ease-in-out infinite;
+}
+
+.animate-orbitSpin {
+  animation: orbitSpin 2.4s linear infinite;
+}
+
+/* Gemini-inspired shimmer skeleton bar */
+.gemini-shimmer-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(56, 189, 248, 0.14) 0%,
+    rgba(99, 102, 241, 0.38) 45%,
+    rgba(168, 85, 247, 0.22) 70%,
+    rgba(56, 189, 248, 0.14) 100%
+  );
+  background-size: 200% 100%;
+  animation: geminiShimmer 1.8s ease-in-out infinite;
+}
+
+.dark .gemini-shimmer-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(56, 189, 248, 0.1) 0%,
+    rgba(99, 102, 241, 0.42) 45%,
+    rgba(168, 85, 247, 0.25) 70%,
+    rgba(56, 189, 248, 0.1) 100%
+  );
+  background-size: 200% 100%;
+  animation: geminiShimmer 1.8s ease-in-out infinite;
+}
+
+/* Brand Gradient Text */
 .askio-gradient-text {
-  background: linear-gradient(135deg, #2563eb 0%, #6366f1 50%, #0ea5e9 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.dark .askio-gradient-text {
-  background: linear-gradient(135deg, #60a5fa 0%, #818cf8 50%, #38bdf8 100%);
+  background: linear-gradient(135deg, #38bdf8 0%, #6366f1 55%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

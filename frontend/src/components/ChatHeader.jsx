@@ -1,5 +1,6 @@
 import React from 'react';
-import { SquarePen, PanelLeftOpen, Menu, MapPin, Sun, Moon, Sparkles, Download } from 'lucide-react';
+import { SquarePen, PanelLeftOpen, Menu, MapPin, Sun, Moon, Download } from 'lucide-react';
+import { AskioLogoIcon, AskioWordmark } from './AskioLogo';
 
 export default function ChatHeader({
   onToggleSidebar,
@@ -46,11 +47,15 @@ export default function ChatHeader({
           </button>
         )}
 
-        <div className="flex items-center gap-2 min-w-0 px-2 py-1 rounded-xl">
-          <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 hidden sm:block" />
-          <h1 className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100 tracking-tight truncate max-w-[160px] sm:max-w-xs md:max-w-md">
-            {activeTitle && activeTitle !== 'New Conversation' ? activeTitle : 'Askio'}
-          </h1>
+        <div className="flex items-center gap-2.5 min-w-0 px-1 py-1 rounded-xl">
+          <AskioLogoIcon className="w-6 h-6 shrink-0 rounded-md shadow-2xs" />
+          {activeTitle && activeTitle !== 'New Conversation' ? (
+            <h1 className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100 tracking-tight truncate max-w-[150px] sm:max-w-xs md:max-w-md">
+              {activeTitle}
+            </h1>
+          ) : (
+            <AskioWordmark className="text-base sm:text-lg" />
+          )}
 
           {/* Subtle status dot */}
           <span

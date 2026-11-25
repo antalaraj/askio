@@ -27,6 +27,7 @@ export function useChat({ activeConversation, updateActiveMessages }) {
   const [attachedDocument, setAttachedDocument] = useState(null);
   const [error, setError] = useState(null);
   const [backendHealth, setBackendHealth] = useState({ status: 'checking', groq_configured: false });
+  const [latestAnimatedId, setLatestAnimatedId] = useState(null);
 
   const lastFailedUserMessageRef = useRef(null);
   const activeConversationIdRef = useRef(activeConversation?.id);
@@ -43,6 +44,7 @@ export function useChat({ activeConversation, updateActiveMessages }) {
       setIsLoading(false);
       setError(null);
       setAttachedDocument(null);
+      setLatestAnimatedId(null);
       lastFailedUserMessageRef.current = null;
     }
   }, [activeConversation?.id]);
@@ -129,6 +131,7 @@ export function useChat({ activeConversation, updateActiveMessages }) {
         };
 
         const finalConversation = [...conversationSnapshot, assistantMessage];
+        setLatestAnimatedId(assistantMessage.id);
         updateActiveMessages(finalConversation);
 
         lastFailedUserMessageRef.current = null;
@@ -243,6 +246,7 @@ export function useChat({ activeConversation, updateActiveMessages }) {
     loadingStatus,
     isUploading,
     attachedDocument,
+    latestAnimatedId,
     error,
     backendHealth,
     sendMessage,

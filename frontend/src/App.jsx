@@ -34,6 +34,7 @@ export default function App() {
     loadingStatus,
     isUploading,
     attachedDocument,
+    latestAnimatedId,
     error,
     backendHealth,
     sendMessage,
@@ -165,6 +166,7 @@ export default function App() {
                     onEditMessage={editUserMessage}
                     onRegenerate={regenerateResponse}
                     isLoading={isLoading}
+                    isNew={msg.id === latestAnimatedId}
                   />
                 ))}
 
