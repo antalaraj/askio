@@ -4,7 +4,7 @@
 
 // Read base URL from Vite environment variable or default to local backend
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const DEFAULT_TIMEOUT_MS = 30000; // 30-second timeout
+const DEFAULT_TIMEOUT_MS = 45000; // 45-second timeout for multi-step tool calls
 
 /**
  * Custom error class for API errors.
@@ -49,7 +49,7 @@ export async function checkBackendHealth() {
  * @param {Array<{ role: string, content: string }>} messages
  * @returns {Promise<{ role: string, content: string }>}
  */
-export async function sendChatMessage(messages, clientInfo = null) {
+export async function sendChatMessage(messages, clientInfo = null, documentContext = null) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 
@@ -60,16 +60,24 @@ export async function sendChatMessage(messages, clientInfo = null) {
       content: content.trim()
     }));
 
+    const payload = {
+      messages: sanitizedMessages,
+      client_info: clientInfo
+    };
+    if (documentContext && documentContext.text) {
+      payload.document_context = {
+        filename: documentContext.filename,
+        text: documentContext.text
+      };
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({
-        messages: sanitizedMessages,
-        client_info: clientInfo
-      }),
+      body: JSON.stringify(payload),
       signal: controller.signal
     });
 
@@ -93,7 +101,9 @@ export async function sendChatMessage(messages, clientInfo = null) {
 
     return {
       role: 'assistant',
-      content: data.content
+      content: data.content,
+      sources: Array.isArray(data.sources) ? data.sources : [],
+      toolsUsed: Array.isArray(data.tools_used) ? data.tools_used : []
     };
   } catch (err) {
     clearTimeout(timeoutId);
@@ -133,4 +143,32 @@ function getDefaultErrorMessage(status) {
     default:
       return 'Sorry, something went wrong while generating your response.';
   }
+}
+
+/**
+ * Upload a PDF, TXT, MD, CSV, or JSON document for text extraction.
+ * @param {File} file
+ * @returns {Promise<{ filename: string, text: string, char_count: number, page_count: number }>}
+ */
+export async function uploadDocument(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE_URL}/api/upload`, {
+    method: 'POST',
+    body: formData
+  });
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    throw new ChatApiError(data?.error || 'Failed to process uploaded document.', response.status, false);
+  }
+
+  return data;
 }

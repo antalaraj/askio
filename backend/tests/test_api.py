@@ -92,6 +92,7 @@ class AskioApiTestCase(unittest.TestCase):
         mock_instance = MagicMock()
         mock_choice = MagicMock()
         mock_choice.message.content = "I am Askio AI assistant."
+        mock_choice.message.tool_calls = None
         mock_completion = MagicMock()
         mock_completion.choices = [mock_choice]
         mock_instance.chat.completions.create.return_value = mock_completion
@@ -107,6 +108,40 @@ class AskioApiTestCase(unittest.TestCase):
             data = response.get_json()
             self.assertEqual(data.get("role"), "assistant")
             self.assertEqual(data.get("content"), "I am Askio AI assistant.")
+
+    def test_calculator_tool(self):
+        """Test safe mathematical calculator."""
+        from services.calculator_service import calculate_expression
+        res = calculate_expression("25% of 80,000 + sqrt(144)")
+        self.assertEqual(res.get("result"), 20012)
+
+    def test_code_executor_sandbox(self):
+        """Test safe Python sandbox execution and restriction."""
+        from services.code_executor_service import execute_python_code
+        ok = execute_python_code("print(2 ** 10)")
+        self.assertTrue(ok.get("success"))
+        self.assertEqual(ok.get("stdout"), "1024")
+
+        blocked = execute_python_code("import os; print(os.listdir('.'))")
+        self.assertIn("Sandbox restriction", blocked.get("error", ""))
+
+    def test_url_ssrf_protection(self):
+        """Test that internal/private URLs are blocked."""
+        from services.url_service import fetch_webpage
+        res = fetch_webpage("http://127.0.0.1:5000/api/health")
+        self.assertIn("blocked", res.get("error", "").lower())
+
+    def test_upload_txt_document(self):
+        """Test uploading a text document to /api/upload."""
+        import io
+        data = {
+            'file': (io.BytesIO(b"Askio quarterly revenue grew by 42% in Q3."), 'report.txt')
+        }
+        response = self.client.post('/api/upload', data=data, content_type='multipart/form-data')
+        self.assertEqual(response.status_code, 200)
+        res_json = response.get_json()
+        self.assertEqual(res_json.get("filename"), "report.txt")
+        self.assertIn("42%", res_json.get("text", ""))
 
 if __name__ == '__main__':
     unittest.main()

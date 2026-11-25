@@ -5,6 +5,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from groq import RateLimitError, AuthenticationError, APIConnectionError, APITimeoutError, APIError
 from services.groq_service import generate_chat_response, DEFAULT_MODEL, MissingApiKeyError
+from services.document_service import extract_document_text
 
 # Load environment variables
 load_dotenv()
@@ -67,12 +68,13 @@ def chat():
     if not isinstance(client_info, dict):
         client_info = {}
 
+    document_context = data.get("document_context")
+    if document_context is not None and not isinstance(document_context, dict):
+        document_context = None
+
     try:
-        reply_content, status_code = generate_chat_response(messages, client_info)
-        return jsonify({
-            "role": "assistant",
-            "content": reply_content
-        }), status_code
+        response_payload, status_code = generate_chat_response(messages, client_info, document_context)
+        return jsonify(response_payload), status_code
 
     except MissingApiKeyError as e:
         logger.error("Missing API Key: %s", str(e))
@@ -115,6 +117,25 @@ def chat():
         return jsonify({
             "error": "An internal server error occurred. Please try again later."
         }), 500
+
+@app.route("/api/upload", methods=["POST"])
+def upload_document():
+    """
+    Document upload endpoint for extracting text from PDF, TXT, MD, CSV, and JSON files.
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "No file part in the request."}), 400
+
+    file = request.files["file"]
+    if not file or not file.filename:
+        return jsonify({"error": "No file selected."}), 400
+
+    file_bytes = file.read()
+    result = extract_document_text(file.filename, file_bytes)
+    if result.get("error"):
+        return jsonify({"error": result["error"]}), 400
+
+    return jsonify(result), 200
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))

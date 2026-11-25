@@ -105,12 +105,18 @@ askio/
 │   └── vite.config.js
 │
 ├── backend/
-│   ├── app.py                       # Flask application routes (/api/health, /api/chat)
+│   ├── app.py                       # Flask routes (/api/health, /api/chat, /api/upload)
 │   ├── requirements.txt             # Pinned backend dependencies
 │   ├── .env.example
 │   ├── services/
 │   │   ├── __init__.py
-│   │   └── groq_service.py          # Groq SDK integration, prompt & history sanitation
+│   │   ├── groq_service.py          # Groq tool-calling agent loop & orchestration
+│   │   ├── search_service.py        # Real-time web search (Tavily / DuckDuckGo)
+│   │   ├── calculator_service.py    # Safe AST-based math & statistics evaluator
+│   │   ├── code_executor_service.py # Isolated Python subprocess sandbox
+│   │   ├── url_service.py           # SSRF-protected webpage reader
+│   │   ├── document_service.py      # PDF, TXT, MD, CSV, JSON text extractor
+│   │   └── weather_service.py       # Live Open-Meteo weather & geolocation
 │   └── tests/
 │       └── test_api.py              # Unit & mock test suite
 │
@@ -127,7 +133,9 @@ askio/
 | Variable | Description | Default / Example |
 |---|---|---|
 | `GROQ_API_KEY` | Your official API key from [console.groq.com](https://console.groq.com) | `gsk_...` |
-| `GROQ_MODEL` | Supported Groq Llama model identifier | `llama-3.3-70b-versatile` |
+| `GROQ_MODEL` | Supported Groq tool-capable model identifier | `qwen/qwen3.8-27b` |
+| `TAVILY_API_KEY` | *(Optional)* Tavily Search API key (falls back to DuckDuckGo) | `tvly-...` |
+| `WEATHER_API_KEY` | *(Optional)* Weather API key (Open-Meteo is used by default) | *(optional)* |
 | `PORT` | Local server port | `5000` |
 | `FRONTEND_URL` | Allowed CORS origin (comma-separated or `*`) | `http://localhost:5173` |
 

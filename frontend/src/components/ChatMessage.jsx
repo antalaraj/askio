@@ -1,6 +1,27 @@
 import React, { useState } from 'react';
-import { Bot, User, Copy, Check } from 'lucide-react';
+import {
+  Bot,
+  User,
+  Copy,
+  Check,
+  Globe,
+  Calculator,
+  Terminal,
+  CloudSun,
+  Clock,
+  FileText,
+  ExternalLink
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+
+const TOOL_LABELS = {
+  web_search: { label: 'Web Search', icon: Globe },
+  calculate: { label: 'Calculator', icon: Calculator },
+  execute_python: { label: 'Python Sandbox', icon: Terminal },
+  fetch_webpage: { label: 'Webpage Reader', icon: Globe },
+  get_weather: { label: 'Live Weather', icon: CloudSun },
+  get_current_datetime: { label: 'Date & Time', icon: Clock }
+};
 
 export default function ChatMessage({ message }) {
   const isAssistant = message.role === 'assistant';
@@ -23,6 +44,9 @@ export default function ChatMessage({ message }) {
       })
     : '';
 
+  const toolsUsed = Array.isArray(message.toolsUsed) ? message.toolsUsed : [];
+  const sources = Array.isArray(message.sources) ? message.sources : [];
+
   return (
     <div
       className={`group flex gap-3 sm:gap-4 my-4 w-full transition-all ${
@@ -44,6 +68,33 @@ export default function ChatMessage({ message }) {
             : 'bg-blue-600 text-white shadow-xs rounded-br-xs'
         }`}
       >
+        {/* Attached Document Badge (User Message) */}
+        {!isAssistant && message.attachedFileName && (
+          <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/40 border border-blue-400/50 text-[11px] font-medium text-blue-50">
+            <FileText className="w-3.5 h-3.5" />
+            <span className="truncate max-w-[200px]">{message.attachedFileName}</span>
+          </div>
+        )}
+
+        {/* Tool Activity Badges (Assistant Message) */}
+        {isAssistant && toolsUsed.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {toolsUsed.map((toolKey) => {
+              const meta = TOOL_LABELS[toolKey] || { label: toolKey, icon: Globe };
+              const Icon = meta.icon;
+              return (
+                <span
+                  key={toolKey}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-semibold tracking-wide"
+                >
+                  <Icon className="w-3 h-3 text-blue-600" />
+                  {meta.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         {/* Message Content */}
         <div className="select-text font-normal">
           {isAssistant ? (
@@ -54,6 +105,16 @@ export default function ChatMessage({ message }) {
                 ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
                 li: ({ children }) => <li className="leading-relaxed">{children}</li>,
                 strong: ({ children }) => <strong className="font-semibold text-[#0F172A]">{children}</strong>,
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    {children}
+                  </a>
+                ),
                 code: ({ inline, children }) =>
                   inline ? (
                     <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>
@@ -68,6 +129,30 @@ export default function ChatMessage({ message }) {
             <div className="whitespace-pre-wrap">{message.content}</div>
           )}
         </div>
+
+        {/* Clickable Source Citations */}
+        {isAssistant && sources.length > 0 && (
+          <div className="mt-3 pt-2.5 border-t border-slate-100">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              Sources
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {sources.map((src, idx) => (
+                <a
+                  key={idx}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-[11px] text-slate-700 hover:text-blue-700 transition-colors max-w-[240px]"
+                  title={src.url}
+                >
+                  <ExternalLink className="w-3 h-3 shrink-0 text-blue-500" />
+                  <span className="truncate">{src.title || src.url}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer info: Timestamp & Copy action */}
         <div

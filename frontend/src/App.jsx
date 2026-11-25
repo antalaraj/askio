@@ -27,11 +27,16 @@ export default function App() {
   const {
     messages,
     isLoading,
+    loadingStatus,
+    isUploading,
+    attachedDocument,
     error,
     backendHealth,
     sendMessage,
     retryLastMessage,
-    dismissError
+    dismissError,
+    handleFileUpload,
+    removeAttachedDocument
   } = useChat({
     activeConversation,
     updateActiveMessages
@@ -113,7 +118,7 @@ export default function App() {
                   <ChatMessage key={msg.id} message={msg} />
                 ))}
 
-                {isLoading && <TypingIndicator />}
+                {isLoading && <TypingIndicator statusText={loadingStatus} />}
               </div>
             )}
 
@@ -132,7 +137,14 @@ export default function App() {
         </main>
 
         {/* Sticky Message Input Composer */}
-        <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
+        <ChatInput
+          onSendMessage={sendMessage}
+          isLoading={isLoading}
+          isUploading={isUploading}
+          attachedDocument={attachedDocument}
+          onFileUpload={handleFileUpload}
+          onRemoveDocument={removeAttachedDocument}
+        />
       </div>
 
       {/* Rename Dialog Modal */}
