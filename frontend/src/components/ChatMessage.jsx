@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Bot, User, Copy, Check } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 export default function ChatMessage({ message }) {
   const isAssistant = message.role === 'assistant';
@@ -44,8 +45,28 @@ export default function ChatMessage({ message }) {
         }`}
       >
         {/* Message Content */}
-        <div className="whitespace-pre-wrap font-normal select-text">
-          {message.content}
+        <div className="select-text font-normal">
+          {isAssistant ? (
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
+                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                strong: ({ children }) => <strong className="font-semibold text-[#0F172A]">{children}</strong>,
+                code: ({ inline, children }) =>
+                  inline ? (
+                    <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+                  ) : (
+                    <pre className="bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto text-xs font-mono my-2">{children}</pre>
+                  ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          ) : (
+            <div className="whitespace-pre-wrap">{message.content}</div>
+          )}
         </div>
 
         {/* Footer info: Timestamp & Copy action */}
