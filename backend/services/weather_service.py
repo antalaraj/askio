@@ -38,31 +38,43 @@ WEATHER_KEYWORDS = re.compile(
     re.IGNORECASE
 )
 
-# Cached IP location to avoid repetitive queries
-_cached_ip_location: Optional[Dict[str, Any]] = None
+# Per-IP cache (capped at 256 entries) so multi-user deployments never leak locations
+_ip_location_cache: Dict[str, Dict[str, Any]] = {}
 
-def get_ip_fallback_location() -> Optional[Dict[str, Any]]:
-    """Attempts to automatically detect user's city and coordinates via IP address."""
-    global _cached_ip_location
-    if _cached_ip_location:
-        return _cached_ip_location
+def get_ip_fallback_location(client_ip: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Attempts to detect user's city and coordinates via IP address (supports X-Forwarded-For)."""
+    # Ignore private/loopback local IPs (let ip-api use server's public IP during local dev)
+    ip_key = (client_ip or "").strip()
+    is_local = not ip_key or ip_key in ("127.0.0.1", "::1", "localhost", "unknown") or ip_key.startswith(("10.", "192.168.", "172."))
+    lookup_key = "local" if is_local else ip_key
+
+    if lookup_key in _ip_location_cache:
+        return _ip_location_cache[lookup_key]
 
     try:
+        endpoint = (
+            "http://ip-api.com/json/?fields=status,city,regionName,country,lat,lon"
+            if is_local
+            else f"http://ip-api.com/json/{ip_key}?fields=status,city,regionName,country,lat,lon"
+        )
         with httpx.Client(timeout=3.0) as client:
-            resp = client.get("http://ip-api.com/json/?fields=status,city,regionName,country,lat,lon")
+            resp = client.get(endpoint)
             if resp.status_code == 200:
                 data = resp.json()
                 if data.get("status") == "success":
                     city = data.get("city", "")
                     country = data.get("country", "")
                     label = f"{city}, {country}" if country else city
-                    _cached_ip_location = {
+                    result = {
                         "latitude": data.get("lat"),
                         "longitude": data.get("lon"),
                         "city": label
                     }
-                    logger.info("Auto-detected client location via IP: %s", label)
-                    return _cached_ip_location
+                    if len(_ip_location_cache) >= 256:
+                        _ip_location_cache.clear()
+                    _ip_location_cache[lookup_key] = result
+                    logger.info("Auto-detected client location via IP (%s): %s", lookup_key, label)
+                    return result
     except Exception as e:
         logger.warning("IP geolocation lookup failed: %s", str(e))
 
@@ -216,7 +228,7 @@ def detect_and_get_weather_context(user_text: str, client_info: Optional[Dict[st
             pass
 
     # Step 3: Fallback to auto-detected IP location (seamless for user!)
-    ip_loc = get_ip_fallback_location()
+    ip_loc = get_ip_fallback_location(client_info.get("client_ip"))
     if ip_loc:
         ip_lat = ip_loc.get("latitude")
         ip_lon = ip_loc.get("longitude")

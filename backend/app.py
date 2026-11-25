@@ -1,5 +1,7 @@
 import os
+import time
 import logging
+from collections import defaultdict, deque
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -18,20 +20,67 @@ logging.basicConfig(
 logger = logging.getLogger("Askio")
 
 app = Flask(__name__)
+# Hard limit on incoming HTTP request payload (6 MB)
+app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
 
-# Configure CORS
+# Configure CORS cleanly (avoid credentials=True with wildcard '*')
 frontend_env = os.getenv("FRONTEND_URL", "").strip()
 if frontend_env and frontend_env != "*":
     allowed_origins = [origin.strip() for origin in frontend_env.split(",") if origin.strip()]
+    use_credentials = True
 else:
     allowed_origins = "*"
+    use_credentials = False
 
-CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=use_credentials)
+
+# Lightweight per-IP sliding-window rate limiter (35 req/min)
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_MAX_REQUESTS = 35
+_rate_limit_buckets = defaultdict(deque)
+
+def _get_client_ip() -> str:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+def _is_rate_limited(ip: str) -> bool:
+    # Skip rate limiting during local unit testing
+    if app.testing:
+        return False
+    now = time.time()
+    bucket = _rate_limit_buckets[ip]
+    while bucket and now - bucket[0] > RATE_LIMIT_WINDOW:
+        bucket.popleft()
+    if len(bucket) >= RATE_LIMIT_MAX_REQUESTS:
+        return True
+    bucket.append(now)
+    return False
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+@app.errorhandler(413)
+def handle_payload_too_large(_err):
+    return jsonify({"error": "Request payload or uploaded file exceeds the 6 MB limit."}), 413
+
+@app.errorhandler(404)
+def handle_not_found(_err):
+    return jsonify({"error": "Requested API endpoint was not found."}), 404
+
+@app.errorhandler(405)
+def handle_method_not_allowed(_err):
+    return jsonify({"error": "HTTP method not allowed for this endpoint."}), 405
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
     """
-    Health check endpoint returning application status and Groq configuration status.
+    Health check endpoint returning application status, model, and available tools.
     """
     api_key_configured = bool(os.getenv("GROQ_API_KEY", "").strip())
     model = os.getenv("GROQ_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
@@ -40,7 +89,16 @@ def health_check():
         "status": "healthy",
         "service": "Askio – AI Chat Assistant API",
         "groq_configured": api_key_configured,
-        "model": model
+        "model": model,
+        "tools_enabled": [
+            "web_search",
+            "calculate",
+            "execute_python",
+            "fetch_webpage",
+            "get_weather",
+            "get_current_datetime",
+            "document_upload"
+        ]
     }), 200
 
 @app.route("/api/chat", methods=["POST"])
@@ -48,10 +106,16 @@ def chat():
     """
     Chat endpoint accepting conversation history and returning the assistant response.
     """
+    client_ip = _get_client_ip()
+    if _is_rate_limited(client_ip):
+        return jsonify({
+            "error": "Too many requests. Please wait a moment before sending another message."
+        }), 429
+
     if not request.is_json:
         return jsonify({"error": "Request body must be valid JSON."}), 400
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify({"error": "Malformed request payload."}), 400
 
@@ -61,12 +125,13 @@ def chat():
 
     # Validate latest message
     latest_msg = messages[-1]
-    if not isinstance(latest_msg, dict) or not latest_msg.get("content", "").strip():
+    if not isinstance(latest_msg, dict) or not str(latest_msg.get("content", "")).strip():
         return jsonify({"error": "User message content cannot be empty."}), 400
 
     client_info = data.get("client_info", {})
     if not isinstance(client_info, dict):
         client_info = {}
+    client_info["client_ip"] = client_ip
 
     document_context = data.get("document_context")
     if document_context is not None and not isinstance(document_context, dict):
@@ -123,6 +188,9 @@ def upload_document():
     """
     Document upload endpoint for extracting text from PDF, TXT, MD, CSV, and JSON files.
     """
+    if _is_rate_limited(_get_client_ip()):
+        return jsonify({"error": "Too many upload requests. Please wait a moment."}), 429
+
     if "file" not in request.files:
         return jsonify({"error": "No file part in the request."}), 400
 

@@ -19,6 +19,8 @@ import {
   Zap
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { AskioLogoIcon } from './AskioLogo';
 
 const TOOL_LABELS = {
@@ -344,9 +346,11 @@ export default function ChatMessage({
           </div>
         )}
 
-        {/* Markdown Body */}
+        {/* Markdown & KaTeX Math Body */}
         <div className="select-text">
           <ReactMarkdown
+            remarkPlugins={[remarkMath]}
+            rehypePlugins={[rehypeKatex]}
             components={{
               h1: ({ children }) => <h1 className="text-xl font-bold text-slate-900 dark:text-white mt-4 mb-2">{children}</h1>,
               h2: ({ children }) => <h2 className="text-lg font-bold text-slate-900 dark:text-white mt-3.5 mb-2">{children}</h2>,

@@ -22,6 +22,15 @@ class AskioApiTestCase(unittest.TestCase):
         self.assertEqual(data.get('status'), 'healthy')
         self.assertIn('groq_configured', data)
         self.assertIn('model', data)
+        self.assertIn('tools_enabled', data)
+        self.assertEqual(response.headers.get('X-Content-Type-Options'), 'nosniff')
+        self.assertEqual(response.headers.get('X-Frame-Options'), 'DENY')
+
+    def test_404_returns_json(self):
+        """Test unknown API endpoints return clean JSON 404."""
+        response = self.client.get('/api/nonexistent')
+        self.assertEqual(response.status_code, 404)
+        self.assertIn('error', response.get_json())
 
     def test_chat_non_json(self):
         """Test POST /api/chat with non-JSON request body."""

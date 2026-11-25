@@ -2,8 +2,15 @@
  * Chat service for backend communication with Flask API & Groq.
  */
 
-// Read base URL from Vite environment variable or default to local backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Read and normalize base URL from Vite environment variable (supports Render host-only strings)
+function resolveApiBaseUrl() {
+  const raw = (import.meta.env.VITE_API_URL || '').trim();
+  if (!raw) return 'http://localhost:5000';
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return withProtocol.replace(/\/+$/, '');
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 const DEFAULT_TIMEOUT_MS = 45000; // 45-second timeout for multi-step tool calls
 
 /**
