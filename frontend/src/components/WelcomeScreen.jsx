@@ -31,23 +31,23 @@ const SUGGESTED_PROMPTS = [
 
 export default function WelcomeScreen({ onSelectPrompt }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[62vh] px-4 my-auto">
+    <div className="flex flex-col items-center justify-center py-6 sm:py-10 px-2 sm:px-4 my-auto">
       {/* Floating Hero Askio Brand Emblem */}
-      <div className="relative mb-5 animate-floatSlow">
+      <div className="relative mb-4 sm:mb-5 animate-floatSlow">
         <div className="absolute -inset-3 rounded-3xl bg-gradient-to-tr from-sky-400/25 via-indigo-500/25 to-purple-500/25 blur-xl pointer-events-none" />
-        <AskioLogoIcon className="relative w-16 h-16 sm:w-20 sm:h-20 shadow-xl shadow-indigo-500/15 rounded-2xl" animated />
+        <AskioLogoIcon className="relative w-14 h-14 sm:w-20 sm:h-20 shadow-xl shadow-indigo-500/15 rounded-2xl" animated />
       </div>
 
       {/* Wordmark & Tagline */}
-      <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-center mb-2 animate-fadeIn">
-        <AskioWordmark className="text-4xl sm:text-5xl" />
+      <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-center mb-1.5 sm:mb-2 animate-fadeIn">
+        <AskioWordmark className="text-3xl sm:text-5xl" />
       </h1>
-      <p className="text-sm sm:text-lg font-medium text-slate-500 dark:text-slate-400 text-center max-w-lg mx-auto mb-10 leading-relaxed animate-fadeIn">
+      <p className="text-sm sm:text-lg font-medium text-slate-500 dark:text-slate-400 text-center max-w-lg mx-auto mb-6 sm:mb-10 leading-relaxed animate-fadeIn">
         Your AI. Your Answers. Askio.
       </p>
 
-      {/* Staggered 4-card Suggestion Grid */}
-      <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-left">
+      {/* Staggered 4-card Suggestion Grid (2x2 on mobile, 4-col on desktop) */}
+      <div className="w-full max-w-3xl grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 text-left">
         {SUGGESTED_PROMPTS.map((item, index) => {
           const Icon = item.icon;
           return (
@@ -56,7 +56,7 @@ export default function WelcomeScreen({ onSelectPrompt }) {
               onClick={() => onSelectPrompt(item.prompt)}
               type="button"
               style={{ animationDelay: `${index * 65}ms` }}
-              className="opacity-0 animate-messageIn group relative p-4 rounded-2xl bg-slate-50/90 dark:bg-[#1E1F20] hover:bg-white dark:hover:bg-[#282A2C] border border-slate-200/80 dark:border-slate-800 hover:border-indigo-400/50 dark:hover:border-indigo-500/40 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/5 dark:hover:shadow-black/40 transition-all duration-200 text-left flex flex-col justify-between min-h-[126px] cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
+              className="opacity-0 animate-messageIn group relative p-3 sm:p-4 rounded-2xl bg-slate-50/90 dark:bg-[#1E1F20] hover:bg-white dark:hover:bg-[#282A2C] border border-slate-200/80 dark:border-slate-800 hover:border-indigo-400/50 dark:hover:border-indigo-500/40 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/5 dark:hover:shadow-black/40 transition-all duration-200 text-left flex flex-col justify-between min-h-[104px] sm:min-h-[126px] cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
             >
               <div className="flex items-center justify-between w-full mb-3">
                 <span className={`p-2 rounded-xl ${item.iconBg} transition-transform duration-200 group-hover:scale-110`}>

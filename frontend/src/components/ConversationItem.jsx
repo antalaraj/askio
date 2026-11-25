@@ -13,7 +13,7 @@ export default function ConversationItem({
 
   return (
     <div
-      className={`group relative flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer transition-all ${
+      className={`group relative flex items-center justify-between px-2.5 py-2.5 md:py-2 rounded-xl cursor-pointer transition-all ${
         isActive
           ? 'bg-slate-200/80 dark:bg-[#282A2C] text-slate-900 dark:text-white font-medium'
           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-[#282A2C]/60 hover:text-slate-900 dark:hover:text-white'
@@ -42,10 +42,10 @@ export default function ConversationItem({
             setIsMenuOpen((prev) => !prev);
           }}
           type="button"
-          className={`p-1 rounded-lg transition-opacity cursor-pointer ${
+          className={`p-1.5 rounded-lg transition-opacity cursor-pointer ${
             isActive || isMenuOpen
               ? 'opacity-100 text-slate-600 dark:text-slate-300 hover:bg-slate-300/60 dark:hover:bg-slate-700'
-              : 'opacity-0 group-hover:opacity-100 text-slate-400 hover:bg-slate-300/50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-white'
+              : 'opacity-100 md:opacity-0 md:group-hover:opacity-100 text-slate-400 hover:bg-slate-300/50 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-white'
           }`}
           title="Options"
         >

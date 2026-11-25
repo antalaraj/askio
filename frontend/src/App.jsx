@@ -119,7 +119,7 @@ export default function App() {
   }, [activeConversation, messages]);
 
   return (
-    <div className="flex h-screen min-h-screen bg-white dark:bg-[#131314] text-slate-900 dark:text-[#E3E3E3] overflow-hidden transition-colors">
+    <div className="flex h-[100dvh] w-full bg-white dark:bg-[#131314] text-slate-900 dark:text-[#E3E3E3] overflow-hidden transition-colors">
       {/* Collapsible ChatGPT / Gemini Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -152,7 +152,7 @@ export default function App() {
         <main
           ref={mainScrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-3 sm:px-6 py-4"
+          className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-3 sm:py-4"
         >
           <div className="max-w-3xl mx-auto flex flex-col min-h-full">
             {messages.length === 0 ? (
@@ -189,7 +189,7 @@ export default function App() {
 
         {/* Floating Scroll-to-Bottom Button */}
         {showScrollBottom && messages.length > 0 && (
-          <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-20 animate-fadeIn">
+          <div className="absolute bottom-32 sm:bottom-36 left-1/2 -translate-x-1/2 z-20 animate-fadeIn">
             <button
               type="button"
               onClick={() => scrollToBottom('smooth')}

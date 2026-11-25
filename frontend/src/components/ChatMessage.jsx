@@ -180,7 +180,7 @@ export default function ChatMessage({
               onChange={(e) => setEditText(e.target.value)}
               onKeyDown={handleEditKeyDown}
               rows={2}
-              className="w-full resize-none bg-transparent text-slate-900 dark:text-slate-100 text-sm sm:text-[15px] leading-relaxed focus:outline-hidden"
+              className="w-full resize-none bg-transparent text-slate-900 dark:text-slate-100 text-base sm:text-[15px] leading-relaxed focus:outline-hidden"
             />
             <div className="flex items-center justify-end gap-2 mt-2.5 pt-2 border-t border-slate-200/70 dark:border-slate-700/60">
               <button
@@ -214,7 +214,7 @@ export default function ChatMessage({
             </div>
           )}
 
-          <div className="rounded-3xl rounded-br-md px-5 py-3 bg-[#F3F4F6] dark:bg-[#2F2F2F] text-slate-900 dark:text-slate-100 text-sm sm:text-[15px] leading-relaxed break-words shadow-2xs">
+          <div className="rounded-3xl rounded-br-md px-4 py-2.5 sm:px-5 sm:py-3 bg-[#F3F4F6] dark:bg-[#2F2F2F] text-slate-900 dark:text-slate-100 text-[15px] leading-relaxed break-words shadow-2xs">
             <div className="whitespace-pre-wrap select-text">{message.content}</div>
           </div>
         </div>
@@ -250,14 +250,14 @@ export default function ChatMessage({
 
   // Assistant Message: Borderless Editorial Layout like ChatGPT / Gemini
   return (
-    <div className="group flex gap-3.5 sm:gap-4 my-5 w-full justify-start animate-messageIn">
+    <div className="group flex gap-2.5 sm:gap-4 my-4 sm:my-5 w-full justify-start animate-messageIn">
       {/* Askio Brand Avatar */}
       <div className="shrink-0 mt-0.5">
-        <AskioLogoIcon className="w-8 h-8 rounded-lg shadow-xs" animated={isStreaming} />
+        <AskioLogoIcon className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg shadow-xs" animated={isStreaming} />
       </div>
 
       {/* Editorial Content Area */}
-      <div className="flex-1 min-w-0 text-slate-800 dark:text-[#E3E3E3] text-sm sm:text-[15.5px] leading-7 break-words">
+      <div className="flex-1 min-w-0 text-slate-800 dark:text-[#E3E3E3] text-[15px] sm:text-[15.5px] leading-7 break-words">
         {/* Tool Activity Badges */}
         {toolsUsed.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2.5">

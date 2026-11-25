@@ -53,7 +53,7 @@ export default function ChatInput({
   const isDisabled = !input.trim() || isLoading || isUploading;
 
   return (
-    <div className="sticky bottom-0 z-20 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#131314] dark:via-[#131314]/95 pt-3 pb-3 sm:pb-5 px-3 sm:px-6 transition-colors">
+    <div className="sticky bottom-0 z-20 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#131314] dark:via-[#131314]/95 pt-2.5 sm:pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5 px-2.5 sm:px-6 transition-colors">
       <div className="max-w-3xl mx-auto">
         {/* Attached Document Pill */}
         {(attachedDocument || isUploading) && (
@@ -116,7 +116,7 @@ export default function ChatInput({
                 ? `Ask about ${attachedDocument.filename}...`
                 : 'Message Askio...'
             }
-            className="w-full resize-none bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 text-sm sm:text-[15px] focus:outline-hidden max-h-44 px-1 py-1 leading-relaxed"
+            className="w-full resize-none bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 text-base sm:text-[15px] focus:outline-hidden max-h-40 sm:max-h-44 px-1 py-1 leading-relaxed"
           />
 
           {/* Bottom Composer Action Bar */}
@@ -165,7 +165,7 @@ export default function ChatInput({
         </form>
 
         {/* Minimal Disclaimer */}
-        <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+        <p className="text-center text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 sm:mt-2">
           Askio can make mistakes and uses live tools. Check important info.
         </p>
       </div>

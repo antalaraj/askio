@@ -59,7 +59,7 @@ export default function RenameDialog({ isOpen, currentTitle, onSave, onCancel })
             onKeyDown={handleKeyDown}
             placeholder="Conversation title..."
             maxLength={60}
-            className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#282A2C] border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-4"
+            className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#282A2C] border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-4"
           />
 
           <div className="flex items-center justify-end gap-2 text-xs">

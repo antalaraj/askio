@@ -41,8 +41,10 @@ export default function Sidebar({
 
       {/* ChatGPT / Gemini style Sidebar */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#F9F9F9] dark:bg-[#1E1F20] border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col transition-all duration-200 ease-in-out shrink-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full md:-ml-72'
+        className={`fixed md:static inset-y-0 left-0 z-40 bg-[#F9F9F9] dark:bg-[#1E1F20] border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col transition-all duration-200 ease-in-out shrink-0 ${
+          isOpen
+            ? 'w-[82vw] max-w-[288px] md:w-72 translate-x-0'
+            : 'w-[82vw] max-w-[288px] -translate-x-full md:translate-x-0 md:w-0 md:overflow-hidden md:border-r-0'
         }`}
       >
         {/* Top Row: Brand & Collapse */}
@@ -94,7 +96,7 @@ export default function Sidebar({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search chats..."
-                className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-slate-200/50 dark:bg-[#282A2C]/60 border border-transparent focus:border-slate-300 dark:focus:border-slate-600 focus:bg-white dark:focus:bg-[#282A2C] text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden transition-all"
+                className="w-full pl-8 pr-7 py-2 md:py-1.5 rounded-lg bg-slate-200/50 dark:bg-[#282A2C]/60 border border-transparent focus:border-slate-300 dark:focus:border-slate-600 focus:bg-white dark:focus:bg-[#282A2C] text-base md:text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden transition-all"
               />
               {searchQuery && (
                 <button
@@ -144,7 +146,7 @@ export default function Sidebar({
         </div>
 
         {/* Minimalist Footer */}
-        <div className="px-4 py-3 border-t border-slate-200/70 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+        <div className="px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-slate-200/70 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
           <span className="font-medium">Askio</span>
           <span className="text-slate-400 dark:text-slate-500">Tools + Groq AI</span>
         </div>
