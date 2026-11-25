@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowDown } from 'lucide-react';
+import { ArrowDown, UploadCloud } from 'lucide-react';
 import { useConversations } from './hooks/useConversations';
 import { useChat } from './hooks/useChat';
 import { useTheme } from './hooks/useTheme';
@@ -58,9 +58,12 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [clientContext, setClientContext] = useState(() => getClientContext());
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
 
   const mainScrollRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const isNearBottomRef = useRef(true);
+  const dragCounterRef = useRef(0);
 
   useEffect(() => {
     initLocationIfGranted();
@@ -76,17 +79,25 @@ export default function App() {
   }, []);
 
   const scrollToBottom = useCallback((behavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
   }, []);
 
   useEffect(() => {
+    isNearBottomRef.current = true;
     scrollToBottom('smooth');
-  }, [messages, isLoading, error, scrollToBottom]);
+  }, [messages.length, isLoading, error, scrollToBottom]);
+
+  const handleStreamTick = useCallback(() => {
+    if (isNearBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    }
+  }, []);
 
   const handleScroll = () => {
     const el = mainScrollRef.current;
     if (!el) return;
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    isNearBottomRef.current = distanceFromBottom < 140;
     setShowScrollBottom(distanceFromBottom > 180);
   };
 
@@ -118,9 +129,68 @@ export default function App() {
     URL.revokeObjectURL(url);
   }, [activeConversation, messages]);
 
+  // Global drag-and-drop file attachment handlers
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    if (e.dataTransfer?.types?.includes('Files')) {
+      setIsDraggingFile(true);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsDraggingFile(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDraggingFile(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
   return (
-    <div className="flex h-[100dvh] w-full bg-white dark:bg-[#131314] text-slate-900 dark:text-[#E3E3E3] overflow-hidden transition-colors">
-      {/* Collapsible ChatGPT / Gemini Sidebar */}
+    <div
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      className="relative flex h-[100dvh] w-full bg-white dark:bg-[#131314] text-slate-900 dark:text-[#E3E3E3] overflow-hidden transition-colors"
+    >
+      {/* Drag-and-Drop File Upload Overlay */}
+      {isDraggingFile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 dark:bg-black/65 backdrop-blur-sm animate-fadeIn p-4">
+          <div className="max-w-sm w-full rounded-3xl bg-white dark:bg-[#1E1F20] border-2 border-dashed border-blue-500 p-8 text-center shadow-2xl">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 animate-floatSlow">
+              <UploadCloud className="w-7 h-7" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+              Drop file to analyze
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Supports PDF, TXT, Markdown, CSV, and JSON (up to 5 MB)
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Collapsible ChatGPT / Gemini / Claude Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -152,13 +222,13 @@ export default function App() {
         <main
           ref={mainScrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-3 sm:py-4"
+          className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 pt-3 sm:pt-4 pb-8 sm:pb-10"
         >
           <div className="max-w-3xl mx-auto flex flex-col min-h-full">
             {messages.length === 0 ? (
               <WelcomeScreen onSelectPrompt={(prompt) => sendMessage(prompt)} />
             ) : (
-              <div className="flex-1 flex flex-col justify-start pb-4">
+              <div className="flex-1 flex flex-col justify-start pb-6 sm:pb-8">
                 {messages.map((msg) => (
                   <ChatMessage
                     key={msg.id}
@@ -167,6 +237,7 @@ export default function App() {
                     onRegenerate={regenerateResponse}
                     isLoading={isLoading}
                     isNew={msg.id === latestAnimatedId}
+                    onStreamTick={handleStreamTick}
                   />
                 ))}
 
@@ -183,17 +254,20 @@ export default function App() {
               />
             )}
 
-            <div ref={messagesEndRef} className="h-4" />
+            <div ref={messagesEndRef} className="h-4 shrink-0" />
           </div>
         </main>
 
         {/* Floating Scroll-to-Bottom Button */}
         {showScrollBottom && messages.length > 0 && (
-          <div className="absolute bottom-32 sm:bottom-36 left-1/2 -translate-x-1/2 z-20 animate-fadeIn">
+          <div className="absolute bottom-36 sm:bottom-40 left-1/2 -translate-x-1/2 z-20 animate-fadeIn">
             <button
               type="button"
-              onClick={() => scrollToBottom('smooth')}
-              className="w-8 h-8 rounded-full bg-white dark:bg-[#282A2C] border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 transition-all cursor-pointer"
+              onClick={() => {
+                isNearBottomRef.current = true;
+                scrollToBottom('smooth');
+              }}
+              className="w-9 h-9 rounded-full bg-white dark:bg-[#282A2C] border border-slate-200 dark:border-slate-700 shadow-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 transition-all cursor-pointer"
               title="Scroll to latest"
             >
               <ArrowDown className="w-4 h-4" />

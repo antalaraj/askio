@@ -10,7 +10,13 @@ import {
   CloudSun,
   Clock,
   FileText,
-  ExternalLink
+  ExternalLink,
+  Volume2,
+  Square,
+  ThumbsUp,
+  ThumbsDown,
+  ChevronDown,
+  Zap
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { AskioLogoIcon } from './AskioLogo';
@@ -36,7 +42,7 @@ function CodeBlock({ language, value }) {
   };
 
   return (
-    <div className="my-3 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/70 bg-[#0d1117] text-slate-100 shadow-xs">
+    <div className="my-3.5 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/70 bg-[#0d1117] text-slate-100 shadow-xs">
       <div className="flex items-center justify-between px-3.5 py-2 bg-[#161b22] border-b border-slate-700/60 text-[11px] font-mono text-slate-400">
         <span className="uppercase tracking-wider">{language || 'code'}</span>
         <button
@@ -64,12 +70,26 @@ function CodeBlock({ language, value }) {
   );
 }
 
+/**
+ * Strip markdown symbols for clean natural speech synthesis.
+ */
+function stripMarkdownForSpeech(md) {
+  return (md || '')
+    .replace(/```[\s\S]*?```/g, ' code block omitted. ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_~>#]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export default function ChatMessage({
   message,
   onEditMessage,
   onRegenerate,
   isLoading,
-  isNew = false
+  isNew = false,
+  onStreamTick
 }) {
   const isAssistant = message.role === 'assistant';
   const [copied, setCopied] = useState(false);
@@ -79,35 +99,11 @@ export default function ChatMessage({
     isAssistant && isNew ? '' : message.content
   );
   const [isStreaming, setIsStreaming] = useState(Boolean(isAssistant && isNew));
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [feedback, setFeedback] = useState(null); // 'up' | 'down' | null
+  const [toolsExpanded, setToolsExpanded] = useState(false);
+
   const editTextareaRef = useRef(null);
-
-  // Smooth ChatGPT / Gemini style progressive text reveal for newly arrived assistant replies
-  useEffect(() => {
-    if (!isAssistant || !isNew) {
-      setDisplayedContent(message.content);
-      setIsStreaming(false);
-      return;
-    }
-
-    const fullText = message.content || '';
-    let index = 0;
-    setIsStreaming(true);
-
-    // Adaptive chunk size so short replies feel smooth and long replies finish in ~1.2s
-    const step = Math.max(4, Math.ceil(fullText.length / 65));
-    const timer = setInterval(() => {
-      index += step;
-      if (index >= fullText.length) {
-        setDisplayedContent(fullText);
-        setIsStreaming(false);
-        clearInterval(timer);
-      } else {
-        setDisplayedContent(fullText.slice(0, index));
-      }
-    }, 16);
-
-    return () => clearInterval(timer);
-  }, [message.id, message.content, isAssistant, isNew]);
 
   useEffect(() => {
     if (isEditing && editTextareaRef.current) {
@@ -117,6 +113,45 @@ export default function ChatMessage({
     }
   }, [isEditing, editText]);
 
+  // Smooth word-boundary progressive streaming reveal for newly arrived assistant replies
+  useEffect(() => {
+    if (!isAssistant || !isNew) {
+      setDisplayedContent(message.content);
+      setIsStreaming(false);
+      return;
+    }
+
+    const fullText = message.content || '';
+    const tokens = fullText.split(/(\s+)/); // Preserve whitespace/newlines cleanly
+    let tokenIndex = 0;
+    setIsStreaming(true);
+
+    const tokensPerTick = Math.max(2, Math.ceil(tokens.length / 55));
+    const timer = setInterval(() => {
+      tokenIndex += tokensPerTick;
+      if (tokenIndex >= tokens.length) {
+        setDisplayedContent(fullText);
+        setIsStreaming(false);
+        clearInterval(timer);
+        if (onStreamTick) onStreamTick();
+      } else {
+        setDisplayedContent(tokens.slice(0, tokenIndex).join(''));
+        if (onStreamTick) onStreamTick();
+      }
+    }, 20);
+
+    return () => clearInterval(timer);
+  }, [message.id, message.content, isAssistant, isNew, onStreamTick]);
+
+  // Stop speech synthesis on unmount
+  useEffect(() => {
+    return () => {
+      if (isSpeaking && typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [isSpeaking]);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(message.content);
@@ -125,6 +160,23 @@ export default function ChatMessage({
     } catch (err) {
       console.error('Failed to copy message:', err);
     }
+  };
+
+  const handleToggleSpeak = () => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(stripMarkdownForSpeech(message.content));
+    utterance.rate = 1.03;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleStartEdit = () => {
@@ -141,10 +193,7 @@ export default function ChatMessage({
     const trimmed = editText.trim();
     if (!trimmed || isLoading) return;
     setIsEditing(false);
-    if (onEditMessage && trimmed !== message.content) {
-      onEditMessage(message.id, trimmed);
-    } else if (onEditMessage && trimmed === message.content) {
-      // Even if unchanged, allow re-submitting to re-run from this message
+    if (onEditMessage) {
       onEditMessage(message.id, trimmed);
     }
   };
@@ -167,9 +216,9 @@ export default function ChatMessage({
 
   const toolsUsed = Array.isArray(message.toolsUsed) ? message.toolsUsed : [];
   const sources = Array.isArray(message.sources) ? message.sources : [];
+  const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
   if (!isAssistant) {
-    // User Message: ChatGPT / Gemini style right-aligned soft pill + inline edit mode
     if (isEditing) {
       return (
         <div className="flex justify-end my-4 w-full animate-fadeIn">
@@ -219,7 +268,7 @@ export default function ChatMessage({
           </div>
         </div>
 
-        {/* User Message Hover Actions (Edit & Copy) */}
+        {/* User Message Hover Actions */}
         <div className="flex items-center gap-1 mt-1 pr-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-slate-400 dark:text-slate-500">
           {message.editedAt && <span className="mr-1 italic">(edited)</span>}
 
@@ -248,7 +297,7 @@ export default function ChatMessage({
     );
   }
 
-  // Assistant Message: Borderless Editorial Layout like ChatGPT / Gemini
+  // Assistant Message: Claude / ChatGPT / Gemini Editorial Canvas
   return (
     <div className="group flex gap-2.5 sm:gap-4 my-4 sm:my-5 w-full justify-start animate-messageIn">
       {/* Askio Brand Avatar */}
@@ -258,22 +307,40 @@ export default function ChatMessage({
 
       {/* Editorial Content Area */}
       <div className="flex-1 min-w-0 text-slate-800 dark:text-[#E3E3E3] text-[15px] sm:text-[15.5px] leading-7 break-words">
-        {/* Tool Activity Badges */}
+        {/* Claude-Style Collapsible Tool Summary Pill */}
         {toolsUsed.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2.5">
-            {toolsUsed.map((toolKey) => {
-              const meta = TOOL_LABELS[toolKey] || { label: toolKey, icon: Globe };
-              const Icon = meta.icon;
-              return (
-                <span
-                  key={toolKey}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-[#1E1F20] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60 text-[11px] font-medium"
-                >
-                  <Icon className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                  {meta.label}
-                </span>
-              );
-            })}
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => setToolsExpanded((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100/90 dark:bg-[#1E1F20] hover:bg-slate-200/70 dark:hover:bg-[#282A2C] border border-slate-200/80 dark:border-slate-700/60 text-[11px] font-medium text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+            >
+              <Zap className="w-3 h-3 text-indigo-500 dark:text-sky-400" />
+              <span>
+                Used {toolsUsed.map((k) => TOOL_LABELS[k]?.label || k).join(', ')}
+              </span>
+              <ChevronDown
+                className={`w-3 h-3 transition-transform duration-200 ${toolsExpanded ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {toolsExpanded && (
+              <div className="mt-2 flex flex-wrap gap-1.5 animate-fadeIn">
+                {toolsUsed.map((toolKey) => {
+                  const meta = TOOL_LABELS[toolKey] || { label: toolKey, icon: Globe };
+                  const Icon = meta.icon;
+                  return (
+                    <span
+                      key={toolKey}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-[#1E1F20] text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700/60 text-[11px] font-medium"
+                    >
+                      <Icon className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                      {meta.label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -334,8 +401,8 @@ export default function ChatMessage({
         </div>
 
         {/* Clickable Source Citations */}
-        {sources.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+        {!isStreaming && sources.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 animate-fadeIn">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
               Sources
             </div>
@@ -346,7 +413,7 @@ export default function ChatMessage({
                   href={src.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-[#1E1F20] hover:bg-blue-50 dark:hover:bg-[#282A2C] border border-slate-200/80 dark:border-slate-700/70 hover:border-blue-300 dark:hover:border-blue-500/40 text-xs text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-400 transition-colors max-w-[250px]"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-[#1E1F20] hover:bg-blue-50 dark:hover:bg-[#282A2C] border border-slate-200/80 dark:border-slate-700/70 hover:border-blue-300 dark:hover:border-blue-500/40 text-xs text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-400 transition-colors max-w-full sm:max-w-[250px]"
                   title={src.url}
                 >
                   <ExternalLink className="w-3 h-3 shrink-0 text-blue-500" />
@@ -357,42 +424,93 @@ export default function ChatMessage({
           </div>
         )}
 
-        {/* Action Toolbar: Copy, Regenerate & Timestamp */}
-        <div className="flex items-center gap-2 mt-2.5 text-xs text-slate-400 dark:text-slate-500">
-          <button
-            onClick={handleCopy}
-            type="button"
-            className="inline-flex items-center gap-1.5 px-2 py-1 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
-            title="Copy response"
-          >
-            {copied ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-emerald-600 dark:text-emerald-400 font-medium">Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5" />
-                <span>Copy</span>
-              </>
-            )}
-          </button>
-
-          {onRegenerate && (
+        {/* ChatGPT / Claude Style Action Toolbar */}
+        {!isStreaming && (
+          <div className="flex flex-wrap items-center gap-1 mt-2.5 text-xs text-slate-400 dark:text-slate-500">
             <button
-              onClick={() => onRegenerate(message.id)}
-              disabled={isLoading}
+              onClick={handleCopy}
               type="button"
-              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Regenerate response"
+              className="inline-flex items-center gap-1.5 px-2 py-1.5 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              title="Copy response"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Regenerate</span>
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-scalePop" />
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span className="hidden xs:inline">Copy</span>
+                </>
+              )}
             </button>
-          )}
 
-          {formattedTime && <span className="text-[11px] ml-1">{formattedTime}</span>}
-        </div>
+            {canSpeak && (
+              <button
+                onClick={handleToggleSpeak}
+                type="button"
+                className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] transition-colors cursor-pointer ${
+                  isSpeaking
+                    ? 'text-blue-600 dark:text-sky-400 bg-blue-50/70 dark:bg-blue-500/15'
+                    : 'hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+                title={isSpeaking ? 'Stop reading aloud' : 'Read aloud'}
+              >
+                {isSpeaking ? (
+                  <>
+                    <Square className="w-3 h-3 fill-current" />
+                    <span className="hidden sm:inline font-medium">Stop</span>
+                  </>
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5" />
+                )}
+              </button>
+            )}
+
+            {onRegenerate && (
+              <button
+                onClick={() => onRegenerate(message.id)}
+                disabled={isLoading}
+                type="button"
+                className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Regenerate response"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Regenerate</span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-0.5 ml-0.5">
+              <button
+                type="button"
+                onClick={() => setFeedback((prev) => (prev === 'up' ? null : 'up'))}
+                className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] transition-colors cursor-pointer ${
+                  feedback === 'up'
+                    ? 'text-emerald-600 dark:text-emerald-400 animate-scalePop'
+                    : 'hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+                title="Good response"
+              >
+                <ThumbsUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedback((prev) => (prev === 'down' ? null : 'down'))}
+                className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#282A2C] transition-colors cursor-pointer ${
+                  feedback === 'down'
+                    ? 'text-rose-500 dark:text-rose-400 animate-scalePop'
+                    : 'hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+                title="Bad response"
+              >
+                <ThumbsDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {formattedTime && <span className="text-[11px] ml-1.5 opacity-75">{formattedTime}</span>}
+          </div>
+        )}
       </div>
     </div>
   );

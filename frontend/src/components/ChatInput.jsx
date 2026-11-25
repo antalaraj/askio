@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowUp, Square, Paperclip, FileText, X, Loader2 } from 'lucide-react';
+import { ArrowUp, Square, Paperclip, FileText, X, Loader2, Mic, MicOff } from 'lucide-react';
 
 export default function ChatInput({
   onSendMessage,
@@ -11,8 +11,14 @@ export default function ChatInput({
   onRemoveDocument
 }) {
   const [input, setInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  const supportsSpeech =
+    typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -22,10 +28,70 @@ export default function ChatInput({
     }
   }, [input]);
 
+  // Global '/' shortcut to focus composer cleanly
+  useEffect(() => {
+    const handleGlobalKey = (e) => {
+      if (
+        e.key === '/' &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA'
+      ) {
+        e.preventDefault();
+        textareaRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKey);
+    return () => window.removeEventListener('keydown', handleGlobalKey);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
+
+  const handleToggleVoice = () => {
+    if (!supportsSpeech) return;
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((r) => r[0].transcript)
+        .join(' ')
+        .trim();
+      if (transcript) {
+        setInput((prev) => (prev ? `${prev.trim()} ${transcript}` : transcript));
+      }
+    };
+
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    setIsListening(true);
+    recognition.start();
+  };
+
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || isLoading || isUploading) return;
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
 
     onSendMessage(trimmed);
     setInput('');
@@ -53,7 +119,10 @@ export default function ChatInput({
   const isDisabled = !input.trim() || isLoading || isUploading;
 
   return (
-    <div className="sticky bottom-0 z-20 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#131314] dark:via-[#131314]/95 pt-2.5 sm:pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5 px-2.5 sm:px-6 transition-colors">
+    <div className="sticky bottom-0 z-20 bg-white dark:bg-[#131314] pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4 px-2.5 sm:px-6 transition-colors">
+      {/* Subtle top fade gradient so scrolled text fades cleanly above composer */}
+      <div className="pointer-events-none absolute -top-7 left-0 right-0 h-7 bg-gradient-to-t from-white dark:from-[#131314] to-transparent" />
+
       <div className="max-w-3xl mx-auto">
         {/* Attached Document Pill */}
         {(attachedDocument || isUploading) && (
@@ -89,10 +158,14 @@ export default function ChatInput({
           </div>
         )}
 
-        {/* ChatGPT / Gemini Floating Pill Composer */}
+        {/* ChatGPT / Gemini / Claude Floating Pill Composer */}
         <form
           onSubmit={handleSubmit}
-          className="relative bg-[#F4F4F5] dark:bg-[#1E1F20] border border-slate-200/80 dark:border-slate-700/60 focus-within:bg-white dark:focus-within:bg-[#282A2C] focus-within:border-slate-300 dark:focus-within:border-slate-600 focus-within:shadow-lg focus-within:shadow-slate-900/5 dark:focus-within:shadow-black/30 rounded-3xl transition-all duration-200 px-3.5 py-2.5 sm:px-4 sm:py-3"
+          className={`relative bg-[#F4F4F5] dark:bg-[#1E1F20] border ${
+            isListening
+              ? 'border-rose-400 dark:border-rose-500/70 ring-2 ring-rose-500/20'
+              : 'border-slate-200/90 dark:border-slate-700/60 focus-within:border-slate-300 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-blue-500/15'
+          } focus-within:bg-white dark:focus-within:bg-[#282A2C] focus-within:shadow-lg focus-within:shadow-slate-900/5 dark:focus-within:shadow-black/30 rounded-3xl transition-all duration-200 px-3.5 py-2.5 sm:px-4 sm:py-3`}
         >
           <input
             ref={fileInputRef}
@@ -110,7 +183,9 @@ export default function ChatInput({
             onKeyDown={handleKeyDown}
             disabled={isLoading}
             placeholder={
-              isLoading
+              isListening
+                ? 'Listening... speak now'
+                : isLoading
                 ? 'Askio is thinking...'
                 : attachedDocument
                 ? `Ask about ${attachedDocument.filename}...`
@@ -121,51 +196,68 @@ export default function ChatInput({
 
           {/* Bottom Composer Action Bar */}
           <div className="flex items-center justify-between pt-1.5 mt-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading || isUploading}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700/60 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Upload PDF, TXT, MD, CSV, or JSON"
+                title="Upload or drag-and-drop PDF, TXT, MD, CSV, or JSON"
               >
                 <Paperclip className="w-4 h-4" />
                 <span className="hidden xs:inline">Attach</span>
               </button>
 
               <span className="hidden sm:inline text-[11px] text-slate-400 dark:text-slate-500">
-                Web Search • Math • Python • Docs
+                Web • Math • Python • Docs
               </span>
             </div>
 
-            {isLoading ? (
-              <button
-                type="button"
-                onClick={onStopGeneration}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-slate-900 dark:bg-white hover:bg-red-600 dark:hover:bg-red-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer transition-all"
-                title="Stop generating"
-              >
-                <Square className="w-3.5 h-3.5 fill-current" />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={isDisabled}
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
-                  isDisabled
-                    ? 'bg-slate-300/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-500 cursor-not-allowed'
-                    : 'bg-slate-900 dark:bg-white hover:bg-blue-600 dark:hover:bg-blue-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer'
-                }`}
-                title="Send message (Enter)"
-              >
-                <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
-              </button>
-            )}
+            <div className="flex items-center gap-1.5">
+              {supportsSpeech && !isLoading && (
+                <button
+                  type="button"
+                  onClick={handleToggleVoice}
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                    isListening
+                      ? 'bg-rose-500 text-white animate-pulse shadow-sm shadow-rose-500/30'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200/70 dark:hover:bg-slate-700/60 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title={isListening ? 'Stop dictation' : 'Voice input'}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+              )}
+
+              {isLoading ? (
+                <button
+                  type="button"
+                  onClick={onStopGeneration}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-slate-900 dark:bg-white hover:bg-red-600 dark:hover:bg-red-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer transition-all"
+                  title="Stop generating"
+                >
+                  <Square className="w-3.5 h-3.5 fill-current" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isDisabled}
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
+                    isDisabled
+                      ? 'bg-slate-300/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-500 cursor-not-allowed'
+                      : 'bg-slate-900 dark:bg-white hover:bg-blue-600 dark:hover:bg-blue-400 active:scale-95 text-white dark:text-slate-900 shadow-sm cursor-pointer'
+                  }`}
+                  title="Send message (Enter)"
+                >
+                  <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
+                </button>
+              )}
+            </div>
           </div>
         </form>
 
         {/* Minimal Disclaimer */}
-        <p className="text-center text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 sm:mt-2">
+        <p className="text-center text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
           Askio can make mistakes and uses live tools. Check important info.
         </p>
       </div>

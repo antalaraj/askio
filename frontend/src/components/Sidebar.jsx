@@ -74,15 +74,10 @@ export default function Sidebar({
               }
             }}
             type="button"
-            className="w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-white dark:bg-[#282A2C] hover:bg-slate-100 dark:hover:bg-[#333537] border border-slate-200/80 dark:border-slate-700/60 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 shadow-2xs transition-all cursor-pointer group"
+            className="w-full flex items-center gap-2.5 py-2.5 px-3.5 rounded-xl bg-white dark:bg-[#282A2C] hover:bg-slate-100 dark:hover:bg-[#333537] border border-slate-200/80 dark:border-slate-700/60 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 shadow-2xs transition-all cursor-pointer group"
           >
-            <span className="flex items-center gap-2.5">
-              <SquarePen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span>New chat</span>
-            </span>
-            <kbd className="hidden sm:inline-block text-[10px] font-mono text-slate-400 dark:text-slate-500">
-              +
-            </kbd>
+            <SquarePen className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform" />
+            <span>New chat</span>
           </button>
         </div>
 
@@ -147,8 +142,13 @@ export default function Sidebar({
 
         {/* Minimalist Footer */}
         <div className="px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-slate-200/70 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-          <span className="font-medium">Askio</span>
-          <span className="text-slate-400 dark:text-slate-500">Tools + Groq AI</span>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="font-medium text-slate-700 dark:text-slate-300">Askio AI</span>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-[#282A2C] text-[10px] font-medium text-slate-600 dark:text-slate-300">
+            Tools Ready
+          </span>
         </div>
       </aside>
     </>
